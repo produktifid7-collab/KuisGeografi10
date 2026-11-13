@@ -1,0 +1,496 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sekolah Bumi 🌍</title><style>
+*{box-sizing:border-box}body{margin:0;font-family:"Trebuchet MS",system-ui,sans-serif;background:#2b3a55;overflow:hidden}
+canvas{display:block;touch-action:none}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#0008;z-index:5}
+.card{background:#fff;border-radius:22px;padding:22px;max-width:540px;width:92%;max-height:90vh;overflow:auto;box-shadow:0 10px 40px #0006;text-align:center}
+button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 14px;background:#ff8c1a;color:#fff;font-weight:700;margin:3px}
+button.on{outline:4px solid #2ecc71}
+input{font:inherit;padding:10px;border-radius:10px;border:2px solid #ddd;width:100%;margin:5px 0}
+#hud{position:fixed;top:8px;left:58px;right:8px;transition:transform .35s ease;display:flex;flex-wrap:wrap;gap:6px;z-index:3;pointer-events:none}
+#hud.cl{transform:translateX(-125%)}#hb{position:fixed;top:8px;left:8px;z-index:4;width:42px;height:42px;border-radius:50%;padding:0;margin:0;background:#3a86ff;font-size:18px}
+#hud>*{pointer-events:auto;background:#fffe;border-radius:12px;padding:6px 10px;font-weight:700}
+#hud button{background:#3a86ff;margin:0}
+.opt{display:block;width:100%;background:#3a86ff;text-align:left;font-size:16px;margin:6px 0}
+.ok{background:#2ecc71!important}.no{background:#e74c3c!important}
+@keyframes bn{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-14px) scale(1.12)}}
+@keyframes rb{to{background-position:200% 0}}
+.big{font-size:34px;font-weight:900;line-height:1.2;background:linear-gradient(90deg,#f0f,#f80,#0c0,#08f,#f0f);background-size:200%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:rb 2s linear infinite,bn .8s infinite}
+#rd{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:6;display:none;text-align:center;background:#fffe;border-radius:22px;padding:14px 22px}
+#tt{position:fixed;left:50%;bottom:230px;max-width:90vw;transform:translateX(-50%);background:#222d;color:#fff;border-radius:14px;padding:10px 16px;z-index:8;display:none;font-weight:700;text-align:center}
+.fall{position:fixed;top:-40px;font-size:30px;animation:fl linear forwards;z-index:9;pointer-events:none}
+@keyframes fl{to{transform:translateY(110vh) rotate(360deg)}}
+td{padding:4px 6px}@media(prefers-reduced-motion:reduce){.big{animation:none}}
+#cb{position:fixed;left:8px;bottom:8px;z-index:4;display:none;gap:5px;flex-wrap:wrap;align-items:center;background:#fffd;border-radius:14px;padding:6px 8px;max-width:calc(100vw - 16px)}
+#cb button{padding:3px 8px;margin:0;background:#fff;font-size:20px;border:1px solid #ddd}#ci{width:210px;margin:0;padding:6px 8px}
+#hud{gap:5px}#hud>*{font-size:13px;padding:5px 9px}#hud button{padding:6px 10px;font-size:13px}#ht{display:none;flex-wrap:wrap;gap:4px;max-width:100%}#ht button{padding:5px 8px;font-size:12px}
+#an{position:fixed;top:78px;left:50%;transform:translateX(-50%);max-width:92vw;z-index:7;display:none;text-align:center;padding:12px 22px;border-radius:20px;background:#fffe;box-shadow:0 6px 24px #0005}#at{font-size:clamp(18px,3.6vw,30px);font-weight:900;color:#c0392b;overflow-wrap:anywhere}
+#qbw{height:8px;background:#eee;border-radius:4px;margin-bottom:8px;overflow:hidden}#qb{height:100%;width:100%;transition:width .2s linear}
+h2,h3,p,.opt,li{overflow-wrap:anywhere}
+@media(max-width:700px){#hud>*{font-size:12px}.big{font-size:26px}#ci{width:150px}#cb button{font-size:17px;padding:2px 6px}}
+</style><script src="https://cdn.jsdelivr.net/npm/mqtt@5/dist/mqtt.min.js"></script>
+<script>window.mqtt||document.write('<script src="https://unpkg.com/mqtt@5/dist/mqtt.min.js"><\/script>')</script>
+</head><body>
+<canvas id="c"></canvas>
+<button id="hb" onclick="hudT()" title="Buka/tutup menu">◀</button>
+<div id="hud"><span id="hn"></span><span id="hr" style="display:none;cursor:pointer" onclick="copyRoom()" title="Klik untuk menyalin link ruang"></span><span id="hm"></span><span id="hp" style="display:none"></span><span id="hc" style="display:none"></span>
+<button id="hsb" style="display:none" onclick="shop()">🛍️ Toko</button><button id="hbd" style="display:none" onclick="bdg()">🏅 Lencana</button><button id="hj" style="display:none" onclick="space()">🦘 Lompat</button>
+<span id="ht"><button onclick="act('open',0,'ulangan')">🔓 Ulangan</button><button onclick="act('open',0,'poin')">🔓 Poin</button><button onclick="act('close')">🔒 Kunci</button><button onclick="pn()">👥 Siswa</button><button onclick="space()">🤲 Ambil/Lempar</button><button id="hl" style="display:none" onclick="ld()">🏆 Leader Point</button><button onclick="act('time')">🕒 Waktu</button><button onclick="act('rain')">🌧️ Hujan</button><button onclick="ann()">📢 Pengumuman</button><button onclick="csv()">⬇️ Rekap</button><button onclick="bdOpen()">📋 Papan Tulis</button><button onclick="keyOpen()">🔑 Kunci Jawaban</button><button onclick="act('freeze')">🧊 Bekukan</button></span>
+<button id="hq" onclick="lqT()">⚡ Hemat</button><button onclick="music=!music;this.textContent=music?'🎵':'🔇'">🎵</button></div>
+<div id="cb"><button onclick="say('👋')">👋</button><button onclick="say('😂')">😂</button><button onclick="say('🔥')">🔥</button><button onclick="say('👏')">👏</button><button onclick="say('😮')">😮</button><input id="ci" maxlength="40" placeholder="Ketik pesan, Enter kirim"></div>
+<div class="ov" id="sp"><div class="card"><h3>🛍️ Toko Penampilan</h3><div id="sl"></div><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<div id="an"><div id="at"></div></div>
+<div class="ov" id="bg"><div class="card"><h3>🏅 Lencana Prestasi</h3><div id="bgl"></div><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<div class="ov" id="bd"><div class="card"><h3>📋 Papan Tulis Kelas</h3><div id="bdt"></div><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<div class="ov" id="ky"><div class="card" style="max-width:720px;text-align:left"><h3>🔑 <span id="kt">Kunci Jawaban Guru</span></h3><input id="ks" placeholder="🔍 Cari kata di soal atau jawaban" oninput="keyDraw()"><div id="kl"></div><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<div class="ov" id="sh"><div class="card"><h3>🎉 Ruang siap dipakai!</h3><div class="big" id="shc"></div><p>Bagikan <b>link</b> ini ke siswa (atau minta mereka mengetik kode ruang di atas):</p><input id="shl" readonly onclick="this.select()"><button onclick="copyRoom()">📋 Salin link</button>
+<p style="font-size:13px;text-align:left">Penting: biarkan halaman ini <b>tetap terbuka</b> selama pelajaran. Komputer guru bertindak sebagai servernya.</p><button style="background:#2ecc71;font-size:18px" onclick="this.parentNode.parentNode.style.display='none'">Mulai 🚀</button></div></div>
+<div id="rd"><div class="big">Siap ulangan? 🔥</div><button style="font-size:20px" onclick="start()">MULAI! 🚀</button><button style="background:#888;font-size:14px" onclick="stand()">🚶 Berdiri</button></div>
+<div id="tt"></div>
+<div class="ov" id="join" style="display:flex;background:linear-gradient(#7ad0ff,#b9f08c)"><div class="card">
+<div class="big">🏫 Sekolah Bumi</div><p>Petualangan belajar Bumi Sebagai Ruang Kehidupan 🌍</p>
+<input id="nm" maxlength="16" placeholder="Nama kamu (tampil di atas karakter)">
+<div><button id="gm" class="on" onclick="gn('m')">👦 Cowok</button><button id="gf" onclick="gn('f')">👧 Cewek</button></div>
+<div><button id="rb0" class="on" onclick="pilihRole(0)">🎒 Saya Siswa</button><button id="rb1" onclick="pilihRole(1)">👑 Saya Guru</button></div>
+<input id="rc" maxlength="6" placeholder="Kode ruang dari guru (mis. EK7P2)" style="text-transform:uppercase">
+<input id="cd" type="password" placeholder="Kode guru" style="display:none">
+<div id="brw" style="display:none;text-align:left;font-size:14px;margin:4px 0">Jalur server publik: <select id="br" style="font:inherit;padding:6px;border-radius:8px"><option value="A">Otomatis (disarankan)</option><option value="E">Jalur E (EMQX)</option><option value="H">Jalur H (HiveMQ)</option><option value="M">Jalur M (Mosquitto)</option></select></div>
+<div id="je" style="color:#c0392b;min-height:20px"></div><button id="jb" style="font-size:20px" onclick="join()">Masuk ke gerbang 🚪</button></div></div>
+<div class="ov" id="q"><div class="card"><div id="qbw"><div id="qb"></div></div><div id="qp" style="font-weight:700;color:#e67e22"></div><h3 id="qt"></h3><div id="qo"></div></div></div>
+<div class="ov" id="rs"><div class="card"><div class="big" id="rt"></div><h2 id="rsc"></h2><p id="rm"></p><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<div class="ov" id="pn"><div class="card"><h3>👥 Daftar Siswa</h3><div id="pl"></div><p style="font-size:13px">Tips: klik karakter siswa di layar untuk menepuk 👋</p><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<div class="ov" id="ld"><div class="card"><h3>🏆 Leader Point</h3><div id="ll"></div><button onclick="this.parentNode.parentNode.style.display='none'">Tutup</button></div></div>
+<script>
+// ===== HOST: logika game (dulu server.js) berjalan di browser guru =====
+const ENC=`{"Q":[
+["Menurut Teori Pasang Surut Gas, apa yang menyebabkan terbentuknya gelombang raksasa pada tubuh Matahari yang saat itu masih berupa gas?", "Gaya tarik sebuah bintang besar yang mendekati Matahari dalam jarak dekat", "Perputaran kabut raksasa yang semakin cepat pada porosnya", "Ledakan salah satu bintang kembar di dalam galaksi", "Hujan meteor yang menghantam Matahari dari segala arah"],
+["Menurut Teori Ledakan Besar (big bang), apa yang terjadi pada gumpalan kabut raksasa yang berputar pada porosnya?", "Bagian-bagian kecil dan ringan terlempar ke luar dan berkumpul membentuk cakram raksasa", "Seluruh kabut membeku tanpa ada bagian yang terlempar", "Kabut ditarik oleh bintang besar hingga membentuk lidah pijar", "Kabut terbelah menjadi dua benua raksasa, yaitu Laurasia dan Gondwana"],
+["Teori Kabut Nebula yang dikemukakan Immanuel Kant dan disempurnakan Pierre de Laplace sering disebut juga teori...", "Kant-Laplace", "Jeans-Jeffreys", "Moulton-Chamberlain", "Holmes-Hess"],
+["Menurut Teori Planetesimal, apa yang terjadi sehingga gas dan materi ringan di bagian tepi Matahari tertarik keluar?", "Bintang lain yang ukurannya hampir sama melintas dekat sehingga hampir terjadi tabrakan", "Matahari berputar semakin cepat pada porosnya", "Salah satu dari dua bintang kembar meledak", "Matahari meledak membentuk galaksi dan nebula-nebula"],
+["Dalam Tata Surya, Bumi merupakan planet ke berapa dari Matahari?", "Ketiga, setelah Merkurius dan Venus", "Kedua, setelah Merkurius", "Keempat, setelah Venus", "Kelima, setelah Mars"],
+["Dalam Teori Bintang Kembar yang dicetuskan Raymond Arthur Lyttleton, bintang yang tidak meledak kemudian dikenal sebagai...", "Matahari", "Bumi", "Nebula", "Galaksi Bima Sakti"],
+["Teori Pasang Surut Gas pertama kali dikenalkan pada tahun 1918 oleh...", "James Jeans dan Harold Jeffreys", "Immanuel Kant dan Pierre de Laplace", "Forest Ray Moulton dan Thomas C. Chamberlain", "Raymond Arthur Lyttleton dan Arthur Holmes"],
+["Bagaimana kondisi bahan penyusun Bumi pada saat awal terbentuknya?", "Masih homogen (seragam) dan belum ada benua maupun samudera", "Sudah terbagi menjadi benua dan samudera yang luas", "Seluruhnya berupa lapisan es yang tebal", "Sudah dihuni berbagai jenis makhluk hidup"],
+["Proses pemadatan Bumi akibat gaya gravitasi, sehingga bagian dalam bumi menerima tekanan lebih besar daripada bagian luarnya, disebut...", "Kompresi", "Akresi", "Disintegrasi", "Konveksi"],
+["Penguraian unsur-unsur radioaktif seperti uranium, thorium, dan potasium yang diiringi pelepasan panas disebut...", "Disintegrasi", "Akresi", "Kompresi", "Subduksi"],
+["Menurut Teori Kontraksi dan Pemuaian yang dicetuskan Descartes, bumi terus menyusut karena pendinginan sehingga permukaannya mengkerut. Peristiwa ini dianalogikan seperti...", "Kulit buah apel yang mengering", "Es di kutub yang mencair", "Gelombang laut yang pasang", "Balon yang ditiup hingga membesar"],
+["Menurut Teori Dua Benua (Edward Zuess), benua Laurasia yang bergerak ke arah ekuator akhirnya terpecah menjadi benua...", "Asia, Eropa, dan Amerika Utara", "Afrika, Australia, dan Amerika Selatan", "Eropa, Afrika, dan Antartika", "Asia, Australia, dan Antartika"],
+["Menurut Teori Pengapungan Benua yang dicetuskan Alfred Wegener, pada awalnya hanya terdapat satu benua yang sangat besar di muka bumi. Benua tersebut bernama...", "Pangea", "Laurasia", "Gondwana", "Eurasia"],
+["Salah satu bukti Teori Konveksi adalah penelitian umur batuan dasar laut: semakin jauh dari punggung tengah samudera (mid oceanic ridge), umur batuannya semakin...", "Tua", "Muda", "Sama dengan umur batuan di punggung samudera", "Berubah menjadi magma cair"],
+["Menurut Teori Lempeng Tektonik (Tozo Wilson), lempeng-lempeng pembentuk kulit bumi selalu bergerak karena pengaruh arus konveksi dari lapisan...", "Astenosfer", "Atmosfer", "Hidrosfer", "Biosfer"],
+["Pergerakan lempeng samudera yang menunjam ke bawah lempeng benua, misalnya yang membentuk parit dari barat Sumatra, selatan Jawa, hingga selatan Nusa Tenggara, disebut...", "Subduksi", "Divergen", "Transform (sesar mendatar)", "Kolisi"],
+["Penambahan panas pada Bumi karena Bumi dihujani benda-benda angkasa, yang energinya berubah menjadi panas, disebut...", "Akresi", "Kompresi", "Disintegrasi", "Konveksi"],
+["Zaman tertua dalam perkembangan kehidupan di bumi adalah zaman...", "Arkaekum", "Paleozoikum", "Mesozoikum", "Neozoikum"],
+["Pada zaman Arkaekum, bumi masih berupa...", "Bola gas yang sangat panas dan berputar pada porosnya", "Bola es raksasa yang membeku", "Hamparan lautan luas tanpa daratan", "Daratan hijau yang dipenuhi hutan lebat"],
+["Zaman Arkaekum berlangsung kurang lebih berapa lama?", "2.500 juta tahun", "340 juta tahun", "150 juta tahun", "60 juta tahun"],
+["Bagaimana keadaan kehidupan di bumi pada zaman Arkaekum?", "Belum ada kehidupan", "Sudah ada mikroorganisme bersel satu", "Sudah ada ikan tanpa rahang", "Dinosaurus mulai berkembang"],
+["Zaman Arkaekum disebut zaman tertua. Zaman yang menyusul setelah Arkaekum, ketika mulai muncul tanda kehidupan berupa mikroorganisme, adalah zaman...", "Paleozoikum", "Mesozoikum", "Neozoikum", "Kuarter"],
+["Keadaan bumi pada zaman Paleozoikum ditandai dengan...", "Bumi belum stabil, iklim berubah-ubah, dan curah hujan sangat besar", "Bumi sudah stabil dengan iklim hangat sepanjang tahun", "Bumi masih berupa bola gas yang sangat panas", "Seluruh permukaan bumi kering tanpa hujan"],
+["Manakah kelompok makhluk hidup yang mulai muncul pada zaman Paleozoikum?", "Mikroorganisme bersel satu, hewan kecil tanpa tulang punggung, jenis ikan, dan ganggang", "Dinosaurus, reptil terbang, dan reptil laut raksasa", "Mammouth, kera, dan manusia purba", "Orangutan, Giganthropus, dan Australopithecus"],
+["Keberadaan hewan dan tumbuhan pada zaman Paleozoikum diketahui dari sisa-sisanya yang telah membatu dan umumnya ditemukan di batu karang. Sisa-sisa tersebut disebut...", "Fosil", "Magma", "Nebula", "Planetesimal"],
+["Fauna Kambrium Bawah bersifat kosmopolit. Apa maksudnya?", "Binatang-binatangnya tersebar di banyak bagian dunia", "Binatang-binatangnya hanya hidup di satu benua", "Binatang-binatangnya seluruhnya hidup di daratan", "Binatang-binatangnya sudah punah semuanya"],
+["Periode Ordovisium ditandai dengan penampilan vertebrata tertua yang berupa...", "Ikan tanpa rahang", "Ikan hiu berahang pemangsa", "Amfibi", "Reptil yang mirip mamalia"],
+["Periode Silur diawali dengan kepunahan Ordovician-Silurian. Berapa persen spesies laut yang punah pada kepunahan tersebut?", "Sekitar 60%", "Sekitar 10%", "Sekitar 30%", "Sekitar 90%"],
+["Pada periode Karbon, apa yang terjadi pada benua-benua di bumi?", "Banyak benua bergabung membentuk wilayah daratan yang lebih luas", "Seluruh benua terpecah menjadi pulau-pulau kecil", "Seluruh benua tenggelam di bawah laut", "Seluruh benua tertutup lapisan es sepenuhnya"],
+["Pada periode Perm terjadi perkembangan pesat hewan jenis...", "Reptil yang mirip dengan mamalia", "Ikan tanpa rahang", "Dinosaurus raksasa", "Mammouth berbulu tebal"],
+["Zaman yang berlangsung sekitar 150 juta tahun dan pada zaman ini perkembangan reptil, terutama dinosaurus, mencapai puncaknya adalah zaman...", "Mesozoikum", "Paleozoikum", "Neozoikum", "Arkaekum"],
+["Iklim bumi yang hangat sepanjang zaman Mesozoikum berperan penting bagi...", "Evolusi dan diversifikasi spesies hewan baru", "Meluasnya lapisan es di Kutub Utara", "Punahnya seluruh jenis hewan bertulang punggung", "Hilangnya seluruh tumbuhan di daratan"],
+["Selama zaman Mesozoikum, benua-benua secara perlahan mengalami pergeseran. Bagaimana arah perubahannya?", "Dari saling menyatu menjadi seperti keadaannya saat ini", "Dari terpisah-pisah menjadi satu benua tunggal", "Dari tertutup es menjadi gurun", "Tidak mengalami pergeseran apa pun"],
+["Pada periode Trias, yaitu awal era Mesozoikum, sebagian besar lahan bumi berupa...", "Gurun dan gunung yang diselimuti semak", "Hutan dan dataran rawa dengan danau serta sungai yang berkelok-kelok", "Delta-delta besar dari sungai yang mengalir perlahan", "Lapisan es yang menutupi Eropa dan Amerika Utara"],
+["Pada periode Jura, sebagian besar lahan bumi terdiri dari...", "Hutan atau dataran rawa dengan danau dan sungai yang berkelok-kelok", "Gurun dan gunung yang diselimuti semak", "Delta-delta besar dari sungai yang mengalir perlahan", "Lapisan es yang menutupi Eropa dan Amerika Utara"],
+["Pada akhir zaman Mesozoikum, apa yang telah terbentuk?", "Dasar-dasar kehidupan modern", "Lapisan es yang menutupi seluruh bumi", "Kehidupan pertama berupa mikroorganisme", "Bumi berupa bola gas yang sangat panas"],
+["Zaman Neozoikum terbagi menjadi dua zaman, yaitu...", "Tersier dan Kuarter", "Trias dan Jura", "Kambrium dan Perm", "Glasial dan Interglasial"],
+["Manakah yang termasuk bagian dari zaman Tersier?", "Kala Miosen", "Kala Pleistosen", "Periode Trias", "Periode Silur"],
+["Menurut modul, orangutan mulai muncul pada kala...", "Miosen", "Pleistosen", "Holosen", "Eosen"],
+["Pada akhir kala Miosen, benua Afrika lepas dari benua Asia sehingga muncul...", "Laut Merah", "Laut Jawa", "Selat Lombok", "Teluk Benggala"],
+["Hewan yang lebih besar daripada gorila, disebut kera manusia raksasa, hidup pada kala Pliosen, dan fosilnya ditemukan di Bukit Siwalik di kaki Pegunungan Himalaya adalah...", "Giganthropus", "Mammouth", "Trilobit", "Orangutan"],
+["Fosil Anthracotherium dan Choeromus (sejenis babi hutan purba) ditemukan di Kalimantan Barat dan juga di daratan Asia. Penemuan ini membuktikan bahwa pada kala Eosen akhir, Kalimantan Barat...", "Bergabung dengan daratan Asia", "Menyatu dengan Benua Australia", "Tertutup lapisan es seluruhnya", "Terpisah jauh dari daratan Asia oleh lautan luas"],
+["Pada zaman Tersier muncul beragam jenis binatang menyusui, termasuk primata seperti kera. Bagaimana nasib jenis reptil raksasa pada zaman ini?", "Lambat laun lenyap", "Mencapai puncak perkembangannya", "Baru mulai muncul di lautan", "Berubah menjadi manusia purba"],
+["Zaman yang ditandai dengan adanya kehidupan manusia seperti sekarang adalah zaman...", "Kuarter", "Arkaekum", "Paleozoikum", "Mesozoikum"],
+["Keadaan alam pada kala Pleistosen liar dan labil karena silih bergantinya dua zaman, yaitu...", "Zaman Glasial dan Zaman Interglasial", "Zaman Tersier dan Zaman Kuarter", "Zaman Primer dan Zaman Sekunder", "Zaman Trias dan Zaman Jura"],
+["Zaman di antara dua zaman es, ketika temperatur naik, es di kutub utara mencair, dan permukaan air laut naik hingga terjadi banjir besar, disebut zaman...", "Interglasial", "Glasial", "Mesozoikum", "Tersier"],
+["Pada kala Pleistosen, hanya hewan berbulu tebal yang mampu bertahan hidup di daerah dingin. Salah satunya adalah...", "Mammouth (gajah berbulu tebal)", "Dinosaurus", "Trilobit", "Giganthropus"],
+["Garis Wallace adalah garis batas antara dua jalan penyeberangan binatang dari Asia ke Nusantara. Garis ini terletak di antara...", "Selat Makassar dan Selat Lombok", "Selat Malaka dan Laut Jawa", "Laut Banda dan Laut Arafura", "Selat Sunda dan Selat Bali"],
+["Fosil Sinanthropus pekinensis di Peking (China) sejenis dengan fosil Pithecanthropus erectus dari Trinil, Ngawi (Jawa Timur). Temuan ini menunjukkan bahwa pada kala Pleistosen terjadi...", "Perpindahan manusia purba dari Asia ke Indonesia", "Perpindahan manusia purba dari Indonesia ke Eropa", "Punahnya seluruh manusia purba di Asia", "Munculnya manusia purba pertama di Benua Australia"],
+["Homo wajakensis menyebar dari Asia ke selatan dan sebagian sampai ke Benua Australia. Mereka menurunkan penduduk asli Australia, yaitu suku...", "Aborigin", "Maori", "Inuit", "Apache"]
+],
+"U":[
+["Manakah pasangan teori pembentukan Tata Surya dan tokoh pencetusnya yang BENAR?", "Teori Pasang Surut Gas – James Jeans dan Harold Jeffreys", "Teori Bintang Kembar – Immanuel Kant", "Teori Planetesimal – Raymond Arthur Lyttleton", "Teori Kabut Nebula – Forest Ray Moulton dan Thomas C. Chamberlain"],
+["Menurut Teori Kabut Nebula (Kant-Laplace), mengapa materi kabut di bagian khatulistiwa terlempar dan berpisah dari kumpulan kabut?", "Karena kumpulan kabut yang sangat besar itu berputar semakin cepat", "Karena ditarik oleh gaya tarik sebuah bintang besar yang mendekat", "Karena salah satu bintang kembar meledak dan pecahannya terlempar", "Karena gumpalan kabut meledak membentuk galaksi dan nebula-nebula"],
+["Menurut Teori Bintang Kembar, planet-planet dalam Tata Surya terbentuk dari...", "Pecahan ledakan salah satu bintang kembar yang mengelilingi bintang yang tidak meledak (Matahari)", "Gelombang gas Matahari yang ditarik oleh sebuah bintang besar yang mendekat", "Gumpalan planetesimal dari materi yang terlempar saat dua bintang hampir bertabrakan", "Bagian kabut yang berputar semakin cepat sehingga materi di khatulistiwa terlepas"],
+["Menurut modul, suhu Bumi yang pada awalnya relatif dingin kemudian meningkat karena tiga faktor, yaitu...", "Akresi, kompresi, dan disintegrasi unsur radioaktif", "Subduksi, obduksi, dan kolisi", "Kontraksi, konveksi, dan pemuaian", "Divergen, konvergen, dan transform"],
+["Manakah pasangan teori pembentukan muka bumi dan pencetusnya yang BENAR?", "Teori Konveksi – Arthur Holmes", "Teori Dua Benua – Alfred Wegener", "Teori Pengapungan Benua – Edward Zuess", "Teori Lempeng Tektonik – Descartes"],
+["Manakah pasangan jenis gerak lempeng tektonik dan contohnya yang BENAR?", "Gerak divergen – Mid Ocean Ridges (MOR) di dasar Samudera Atlantik", "Gerak transform – Pegunungan Himalaya", "Gerak kolisi – Sesar San Andreas", "Gerak subduksi – Mid Ocean Ridges (MOR) di dasar Samudera Atlantik"],
+["Kesamaan garis pantai, batuan, dan fosil antara Afrika bagian barat dan Amerika Selatan bagian timur merupakan bukti pendukung teori...", "Pengapungan Benua (Continental Drift)", "Kontraksi dan Pemuaian", "Dua Benua (Laurasia-Gondwana)", "Konveksi"],
+["Pada zaman Arkaekum belum ada kehidupan di bumi. Apa penyebabnya?", "Bumi masih berupa bola gas yang sangat panas dan berputar pada porosnya", "Seluruh permukaan bumi tertutup lapisan es yang sangat tebal", "Curah hujan yang sangat besar membuat seluruh daratan terendam", "Semua makhluk hidup musnah akibat tabrakan antarbenua"],
+["Manakah urutan EMPAT zaman besar perkembangan kehidupan di bumi dari yang paling tua ke yang paling muda?", "Arkaekum → Paleozoikum → Mesozoikum → Neozoikum", "Paleozoikum → Arkaekum → Mesozoikum → Neozoikum", "Arkaekum → Mesozoikum → Paleozoikum → Neozoikum", "Arkaekum → Paleozoikum → Neozoikum → Mesozoikum"],
+["Manakah ciri zaman Paleozoikum (zaman primer) yang BENAR menurut modul?", "Berlangsung sekitar 340 juta tahun, iklim berubah-ubah, dan curah hujan sangat besar", "Berlangsung sekitar 150 juta tahun, iklim hangat, dan reptil mencapai puncaknya", "Berlangsung sekitar 2.500 juta tahun dan belum ada kehidupan sama sekali", "Berlangsung sekitar 60 juta tahun, iklim sudah stabil, dan mamalia mencapai puncaknya"],
+["Manakah urutan enam periode zaman Paleozoikum dari yang paling tua ke yang paling muda?", "Kambrium → Ordovisium → Silur → Devon → Karbon → Perm", "Kambrium → Silur → Ordovisium → Devon → Karbon → Perm", "Kambrium → Ordovisium → Silur → Karbon → Devon → Perm", "Ordovisium → Kambrium → Silur → Devon → Karbon → Perm"],
+["Pada periode Devon, vertebrata (hewan bertulang belakang) dan artropoda mulai melakukan apa?", "Berkolonisasi (menghuni) daratan", "Menghilang dari lautan karena zaman es", "Berkembang menjadi dinosaurus raksasa", "Hidup hanya sebagai mikroorganisme bersel satu"],
+["Manakah urutan tiga periode zaman Mesozoikum dari yang paling tua ke yang paling muda?", "Trias → Jura → Kreta", "Jura → Trias → Kreta", "Kreta → Jura → Trias", "Trias → Kreta → Jura"],
+["Pada periode apakah sungai-sungai mulai mengalir perlahan dan membentuk delta-delta besar?", "Kreta", "Trias", "Jura", "Karbon"],
+["Manakah pernyataan tentang zaman Neozoikum yang BENAR?", "Mamalia mencapai puncak perkembangannya, reptil besar telah punah, dan iklim mulai stabil", "Reptil raksasa mencapai puncak perkembangannya dan mamalia belum muncul", "Ikan tanpa rahang menjadi vertebrata tertua dan iklim masih berubah-ubah", "Bumi masih berupa bola gas yang panas dan belum ada kehidupan"],
+["Di akhir kala Miosen, hutan di Afrika Timur berubah menjadi sabana. Ke mana orangutan berpindah karena tidak mampu menyesuaikan diri dengan perubahan lingkungan tersebut?", "Ke Asia Tenggara yang masih memiliki hutan lebat", "Ke Benua Australia yang memiliki padang rumput luas", "Ke Kutub Utara yang tertutup lapisan es", "Ke Jazirah Arab yang berubah menjadi gurun"],
+["Manakah pasangan makhluk purba dan tempat fosilnya ditemukan yang BENAR?", "Giganthropus – Bukit Siwalik di kaki Pegunungan Himalaya", "Australopithecus – Bukit Siwalik di kaki Pegunungan Himalaya", "Giganthropus – Afrika Selatan dan Afrika Timur", "Anthracotherium – Afrika Selatan dan Afrika Timur"],
+["Pada zaman Glasial kala Pleistosen, permukaan air laut turun. Apa akibatnya bagi wilayah Indonesia?", "Muncul daratan luas yang disebut Paparan Sunda dan Paparan Sahul", "Terbentuk laut transgresi yang menenggelamkan Paparan Sunda dan Paparan Sahul", "Muncul pulau-pulau baru karena daratan rendah tergenang air", "Seluruh hutan di Indonesia menjadi lebih lebat karena hujan es"],
+["Pada awal kala Holosen, sebagian besar es di kutub utara lenyap dan permukaan air laut naik lagi. Apa akibatnya di wilayah Nusantara?", "Daratan rendah di Paparan Sunda dan Paparan Sahul tergenang menjadi laut sehingga muncul pulau-pulau di Nusantara", "Paparan Sunda dan Paparan Sahul muncul sebagai daratan luas yang menyatukan pulau-pulau", "Lapisan es meluas dan menutupi Eropa serta Amerika Utara", "Sumatra, Kalimantan, dan Jawa bergabung dengan benua Asia"],
+["Kala Pleistosen dianggap sangat penting dalam sejarah bumi karena pada kala ini...", "Mulai muncul manusia purba", "Dinosaurus mencapai puncak perkembangannya", "Kehidupan pertama berupa mikroorganisme mulai muncul", "Bumi masih berupa bola gas yang sangat panas"]
+]}`;
+async function decQ(code,b64){
+ if(code!=='akuGuruhebat') throw new Error('Kode guru salah!');
+ return JSON.parse(b64);
+}
+function createHost(Q,U,CODE){
+const sh=a=>{a=[...a];for(let i=a.length;i>1;){const j=Math.floor(Math.random()*i--);[a[i],a[j]]=[a[j],a[i]]}return a};
+let gate=false,mode=null,taken={},P={},C={},nid=1,seed=7;
+const rnd=()=>(seed=seed*16807%2147483647)/2147483647;
+const WALLS=[[0,0,1200,44],[36,40,44,410],[1156,40,1164,410],[40,406,130,414],[190,406,540,414],[660,406,1010,414],[1070,406,1160,414],[286,40,294,330],[286,380,294,410],[906,40,914,330],[906,380,914,410],[0,672,512,714],[688,672,1200,714],[510,648,540,714],[660,648,690,714]];
+const hit=(x,y,t,gt)=>WALLS.some(r=>x>r[0]-9&&x<r[2]+9&&y>r[1]-7&&y<r[3]+7)||(!gt&&!t&&x>535&&x<665&&y>664&&y<720);
+const cl=(px,py,nx,ny,t)=>{nx=Math.max(20,Math.min(1180,nx));ny=Math.max(20,Math.min(880,ny));if(hit(px,py,t,gate)||!hit(nx,ny,t,gate))return[nx,ny];if(!hit(nx,py,t,gate))return[nx,py];if(!hit(px,ny,t,gate))return[px,ny];return[px,py]};
+const BOX=Array.from({length:50},()=>{let x,y;do{x=Math.floor(80+rnd()*1040);y=Math.floor(60+rnd()*600)}while(hit(x,y,1,1));return[x,y]});
+const fc=(p,b)=>{const l=Math.hypot(b.fx,b.fy);if(l>0){p.fx=b.fx/l;p.fy=b.fy/l}};
+// benda yang bisa dibawa & dilempar guru: [emoji,x,y]
+const IT=[['🏀',930,520],['🏀',1070,580],['⚽',460,540],['🪴',300,640],['🪴',760,560],['📚',330,130],['📚',860,130],['🎒',200,610],['🍎',600,520]].map((a,id)=>({id,e:a[0],x:a[1],y:a[2],z:0,st:0,by:0,vx:0,vy:0,age:0}));
+const SHOP={h1:20,h2:30,h3:50,g1:20,g2:20,c1:10,c2:10,c3:10};
+let TM=0,RAIN=0,ANN=null,FZ=false,FZT=0,BO=-1,FIRST=0,GOLD=new Set();while(GOLD.size<5)GOLD.add(Math.floor(Math.random()*50));
+const CAT={x:700,y:560,tx:700,ty:560,f:0,fu:0,hp:0,nx:0,dir:1,mv:0};
+const CS=n=>{if(CAT.fu>n&&P[CAT.f]){CAT.tx=P[CAT.f].x+28;CAT.ty=P[CAT.f].y+10}else if(n>CAT.nx){CAT.nx=n+2500+Math.random()*3000;let x,y,k=0;do{x=100+Math.random()*1000;y=440+Math.random()*210}while(hit(x,y,1,1)&&k++<9);CAT.tx=x;CAT.ty=y}
+ const dx=CAT.tx-CAT.x,dy=CAT.ty-CAT.y,d=Math.hypot(dx,dy);CAT.mv=d>6?1:0;if(d>6){const s=(CAT.fu>n?95:35)*.05,nx=CAT.x+dx/d*s,ny=CAT.y+dy/d*s;if(!hit(nx,ny,1,1)){CAT.x=nx;CAT.y=ny}if(Math.abs(dx)>3)CAT.dir=dx>0?1:-1}};
+const PH=n=>{if(FZ&&n>FZT)FZ=false;CS(n);
+for(const it of IT)if(it.st===2){it.age+=.05;const nx=it.x+it.vx*.05,ny=it.y+it.vy*.05;
+ if(hit(nx,ny,1,1)||nx<20||nx>1180||ny<20||ny>880){it.st=0;it.z=0;continue}
+ it.x=nx;it.y=ny;const k=Math.min(it.age/.9,1);it.z=28*(1-k)+70*Math.sin(Math.PI*k);
+ const v=Object.values(P).find(q=>!q.t&&q.stun<=n&&Math.hypot(q.x-nx,q.y-ny)<26&&it.z<62);
+ if(v){v.stun=n+1000;it.st=0;it.z=0}else if(k>=1){it.st=0;it.z=0}}};
+const qpub=(i,o,A=Q)=>({q:A[i][0],o});
+const send=(res,o,c=200)=>{res.writeHead(c,{'Content-Type':'application/json'});res.end(JSON.stringify(o))};
+function handle(u,p,b,res){
+ const now=Date.now(),t=p&&p.t;if(p)p.seen=now;
+ switch(u){
+ case'/join':{const nm=String(b.name||'').replace(/[<>&"'`]/g,'').trim().slice(0,16);
+  if(!nm)return send(res,{err:'Isi nama dulu ya!'});
+  let teacher=false;if(b.code){if(b.code!==CODE)return send(res,{err:'Kode guru salah!'});teacher=true}
+  const id=nid++;P[id]={id,name:nm,g:b.g==='f'?'f':'m',t:teacher,x:teacher?600:Math.floor(100+Math.random()*1000),y:teacher?600:Math.floor(750+Math.random()*110),stun:0,seat:-1,pts:0,ex:null,bq:null,hold:null,tc:0,fx:0,fy:1,ct:0,say:"",sayT:0,coin:0,xc:0,own:{},eh:0,eg:0,ec:0,bm:0,stk:0,tr:0,cc:0,hopT:0,seen:now};
+  return send(res,{id,t:teacher,x:P[id].x,y:P[id].y,name:nm})}
+ case'/mv':{if(!p||(p.ex&&!p.ex.done)||p.stun>now||(FZ&&!p.t))return send(res,{});
+  if(now-(p.sitT||0)<500||(p.seat>=0&&!b.lv))return send(res,{});p.seat=-1;fc(p,b);[p.x,p.y]=cl(p.x,p.y,+b.x||p.x,+b.y||p.y,t);return send(res,{})}
+ case'/act':{if(!t)return send(res,{err:'Khusus guru'});
+  if(b.a==='open'&&(b.m==='ulangan'||b.m==='poin')){const fresh=!gate||mode!==b.m;gate=true;mode=b.m;if(fresh){for(const q of Object.values(P))q.seat=-1;if(b.m==='poin'){taken={};GOLD=new Set();while(GOLD.size<5)GOLD.add(Math.floor(Math.random()*50));FIRST=0;for(const q of Object.values(P))q.pts=0}}}
+  if(b.a==='close'){gate=false;mode=null}
+  if(b.a==='time')TM=(TM+1)%3;if(b.a==='rain')RAIN^=1;
+  if(b.a==='ann')ANN={t:String(b.x||'').replace(/[<>&"'`]/g,'').trim().slice(0,80),until:now+8000};
+  if(b.a==='freeze'){FZ=!FZ;FZT=now+30000}
+  if(b.a==='board')BO=(+b.t>=0&&+b.t<7)?+b.t:-1;
+  if(b.a==='slap'&&P[b.t]&&!P[b.t].t)P[b.t].stun=now+1000;
+  if(b.a==='reset'&&P[b.t])P[b.t].ex=null;
+  return send(res,{ok:1})}
+ case'/sit':{if(!p||mode!=='ulangan'||!gate||p.t)return send(res,{err:'Belum bisa duduk'});
+  const s=+b.s;if(Object.values(P).some(q=>q.seat===s&&q.id!==p.id))return send(res,{err:'Kursi sudah dipakai!'});
+  p.seat=s;p.sitT=now;p.x=+b.x;p.y=+b.y+8;return send(res,{ok:1})}
+ case'/start':{if(!p||mode!=='ulangan'||p.seat<0||p.ex)return send(res,{err:'Duduk dulu di kursi ya!'});
+  const ids=sh([...U.keys()]);p.tr=(p.tr||0)+1;p.ex={ids,o:ids.map(i=>sh(U[i].slice(1))),i:0,ok:0,done:false,sc:null};
+  return send(res,{q:{...qpub(ids[0],p.ex.o[0],U),i:1,n:20}})}
+ case'/ans':{const e=p&&p.ex;if(!e||e.done)return send(res,{});
+  const r=e.o[e.i][+b.c]===U[e.ids[e.i]][1];if(r)e.ok++;e.i++;
+  if(e.i>=20){e.done=true;e.sc=e.ok*5;if(e.sc===100)p.bm|=8;if(e.sc>=80){p.bm|=16;if(p.tr>1)p.bm|=32}const gc=Math.floor(e.sc/2);if(gc>p.xc){p.coin+=gc-p.xc;p.xc=gc}return send(res,{r,sc:e.sc})}
+  return send(res,{r,next:{...qpub(e.ids[e.i],e.o[e.i],U),i:e.i+1,n:20}})}
+ case'/space':{if(!p||!t)return send(res,{});
+  if(b.fx||b.fy)fc(p,b);
+  if(p.hold!==null){const it=IT[p.hold];let x=p.x+p.fx*16,y=p.y+p.fy*10;if(hit(x,y,1,1)){x=p.x;y=p.y}
+   Object.assign(it,{st:2,x,y,z:28,vx:p.fx*420,vy:p.fy*420,age:0,by:p.id});p.hold=null;p.tc++;return send(res,{})}
+  let bi=null,bd=52;for(const it of IT)if(it.st===0){const d=Math.hypot(it.x-p.x,it.y-p.y);if(d<bd){bd=d;bi=it}}
+  if(!bi)return send(res,{msg:'Dekati benda dulu (bola, buku, pot, tas, apel) lalu tekan Spasi'});
+  bi.st=1;bi.by=p.id;p.hold=bi.id;return send(res,{msg:'Dapat '+bi.e+'! Hadap arah lalu tekan Spasi untuk melempar'})}
+ case'/chat':{if(!p)return send(res,{});const m=String(b.m||'').replace(/[<>&"'`]/g,'').trim().slice(0,40);if(!m||now-p.ct<700)return send(res,{});p.ct=now;p.say=m;p.sayT=now+4500;p.cc=(p.cc||0)+1;if(p.cc>=5)p.bm|=128;return send(res,{})}
+ case'/shop':return send(res,p?{coin:p.coin,own:p.own}:{});
+ case'/buy':{if(!p||p.t)return send(res,{err:'?'});const k=String(b.k),f={h:'eh',g:'eg',c:'ec'}[k[0]],n=+k[1];
+  if(!f||k.length!==2||!(n>=0&&n<=3))return send(res,{err:'?'});
+  if(n>0&&!p.own[k]){const c=SHOP[k];if(!c)return send(res,{err:'?'});if(p.coin<c)return send(res,{err:'Koinmu belum cukup 🪙'});p.coin-=c;p.own[k]=1;p.bm|=64}
+  p[f]=n;return send(res,{coin:p.coin,own:p.own})}
+ case'/hop':{if(!p||p.t||p.stun>now||p.seat>=0||FZ||now<p.hopT+150)return send(res,{});p.hopT=now+400;return send(res,{})}
+ case'/cat':{if(!p)return send(res,{});if(Math.hypot(p.x-CAT.x,p.y-CAT.y)>110)return send(res,{err:'Dekati kucingnya dulu 🐈'});CAT.f=p.id;CAT.fu=now+7000;CAT.hp=now+1500;return send(res,{ok:1})}
+ case'/key':{if(!t)return send(res,{err:'Khusus guru'});const A=mode==='ulangan'?U:Q;return send(res,{k:A.map(x=>{const o=sh(x.slice(1));return{q:x[0],o,c:o.indexOf(x[1])}}),m:mode==='ulangan'?'ulangan':'poin',n:A.length})}
+ case'/ping':return send(res,{ok:1});
+ case'/bye':{if(p&&!p.local)dropP(p);return send(res,{})}
+ case'/box':{if(!p||mode!=='poin'||!gate||p.t)return send(res,{err:'Belum bisa'});
+  const i=+b.b;if(!(i>=0&&i<50))return send(res,{err:'?'});
+  if(taken[i]!==undefined)return send(res,{err:'Yah, soal ini sudah diambil! 😅'});
+  const o=sh(Q[i].slice(1));p.bq={b:i,o};return send(res,{q:{...qpub(i,o),gold:GOLD.has(i)?1:0}})}
+ case'/bans':{const k=p&&p.bq;if(!k)return send(res,{});
+  if(taken[k.b]!==undefined){p.bq=null;return send(res,{r:false,late:1})}
+  const r=k.o[+b.c]===Q[k.b][1];let add=0,gold=0,bonus=0;
+  if(r){gold=GOLD.has(k.b)?1:0;add=gold?30:10;p.stk=(p.stk||0)+1;if(p.stk%3===0){bonus=20;add+=20;p.bm|=2}if(gold)p.bm|=4;if(!FIRST){FIRST=p.id;p.bm|=1}taken[k.b]=p.id;p.pts+=add;p.coin+=add;p.bq=null}else p.stk=0;
+  return send(res,{r,pts:p.pts,add,gold,bonus})}
+ }
+ send(res,{err:'?'},404)}
+
+const dropP=q=>{if(q.hold!==null){const it=IT[q.hold];it.st=0;it.x=q.x;it.y=q.y}delete P[q.id]};
+const tick=()=>{const n=Date.now();PH(n);for(const q of Object.values(P))if(!q.local&&n-(q.seen||n)>25000)dropP(q);return JSON.stringify({g:gate,m:mode,
+  p:Object.values(P).map(p=>[p.id,p.name,p.g,p.t?1:0,Math.round(p.x),Math.round(p.y),p.stun>n?1:0,p.seat,p.pts,p.ex?(p.ex.done?p.ex.sc:-1-p.ex.i):null,p.hold===null?-1:p.hold,p.tc,Math.round(Math.atan2(p.fy,p.fx)*57.3),p.sayT>n?p.say:'',p.eh*100+p.eg*10+p.ec,p.coin,p.hopT>n?1:0,p.bm]),
+  b:mode==='poin'?BOX.map((b,i)=>taken[i]!==undefined?null:[i,b[0],b[1],GOLD.has(i)?1:0]).filter(Boolean):[],tm:TM,rn:RAIN,an:ANN&&ANN.until>n?ANN.t:'',fz:FZ?1:0,bo:BO,ct:[Math.round(CAT.x),Math.round(CAT.y),CAT.hp>n?1:0,CAT.dir,CAT.mv],i:IT.map(t=>[t.id,t.e,Math.round(t.x),Math.round(t.y),Math.round(t.z),t.st,t.by])})};
+return{P,tick,handle:(u,b)=>new Promise(r=>{const res={writeHead(){},end(s){r(JSON.parse(s))}};try{handle(u,P[b.id],b,res)}catch(e){r({err:'Kesalahan di ruang: '+e.message})}})}}
+</script>
+<script>
+const $=i=>document.getElementById(i),W=1200,H=900,cv=$('c'),g=cv.getContext('2d');
+let me,S={I:[],P:[],b:[],g:0,m:null},pp={},tgt=null,pend=null,keys={},modal=0,sc=1,ox=0,oy=0,lastG=0,gen='m',music=1,dirty=0,wasS=0,lastA='',lastF=0,lastB=-1,lastH=0,bellT=-1e9,tempo=1,AC,LQ=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||(navigator.hardwareConcurrency||8)<=4,lqSet=0,acc=0,fr=0,ft=0;
+const R=()=>{cv.width=innerWidth;cv.height=innerHeight;sc=Math.min(cv.width/W,cv.height/H);ox=(cv.width-W*sc)/2;oy=(cv.height-H*sc)/2};onresize=R;R();
+let NET=null,ROOM='',HOST=null,HOSTMODE=false,ROLE=0,CID=Math.random().toString(36).slice(2,10),PEND={},RID=0,lastMsg=0,missing=0,JOINP=null,lastS='',lastL='',lastW=0,lastLW=0,tk=0;
+const TP='sekolahbumi/v1/',ALF='ABCDEFGHJKMNPQRSTUVWXYZ23456789',BROKERS=[['E','wss://broker.emqx.io:8084/mqtt'],['H','wss://broker.hivemq.com:8884/mqtt'],['M','wss://test.mosquitto.org:8081']];
+const api=(u,b={})=>{b={...b,id:me&&me.id};if(HOSTMODE)return HOST.handle(u,b);return new Promise(res=>{if(!NET)return res({err:'Belum tersambung'});const r=++RID;PEND[r]=res;NET.publish(TP+ROOM+'/req',JSON.stringify({c:CID,r,u,b}));setTimeout(()=>{if(PEND[r]){delete PEND[r];res({err:'Koneksi putus 😢'})}},4000)})};
+const WALLS=[[0,0,1200,44],[36,40,44,410],[1156,40,1164,410],[40,406,130,414],[190,406,540,414],[660,406,1010,414],[1070,406,1160,414],[286,40,294,330],[286,380,294,410],[906,40,914,330],[906,380,914,410],[0,672,512,714],[688,672,1200,714],[510,648,540,714],[660,648,690,714]];
+const hit=(x,y,t,gt)=>WALLS.some(r=>x>r[0]-9&&x<r[2]+9&&y>r[1]-7&&y<r[3]+7)||(!gt&&!t&&x>535&&x<665&&y>664&&y<720);
+const cl=(px,py,nx,ny,t,gt)=>{nx=Math.max(20,Math.min(W-20,nx));ny=Math.max(20,Math.min(H-20,ny));if(hit(px,py,t,gt)||!hit(nx,ny,t,gt))return[nx,ny];if(!hit(nx,py,t,gt))return[px,ny];return[px,py]};
+const its={};
+function land(){let x=me.x+me.fx*16,y=me.y+me.fy*10;if(hit(x,y,1,1)){x=me.x;y=me.y}const a=[];for(let i=0;i<18;i++){const nx=x+me.fx*21,ny=y+me.fy*21;if(hit(nx,ny,1,1)||nx<20||nx>1180||ny<20||ny>880)break;x=nx;y=ny;a.push([x,y])}return a}
+function space(){if(!me||modal)return;if(!me.t){if(!me.sit&&!S.fz)api('/hop');return}api('/space',{fx:me.fx,fy:me.fy}).then(r=>{if(r.msg){toast(r.msg);snd(880,.08)}})}
+function itm(i,t){const o=its[i.id];if(!o)return;g.font='24px serif';g.textAlign='center';
+ if(i.st==1){const q=pp[i.by];if(q)g.fillText(i.e,q.x,q.y-34+Math.sin(t/200)*1.5);return}
+ if(i.st==2){const k=Math.max(.4,1-o.z/140);g.fillStyle='#0004';g.beginPath();g.ellipse(o.x,o.y+4,12*k,5*k,0,0,7);g.fill();g.save();g.translate(o.x,o.y-o.z);g.rotate(t/90);g.fillText(i.e,0,8);g.restore();return}
+ g.fillStyle='#0003';g.beginPath();g.ellipse(o.x,o.y+8,11,4,0,0,7);g.fill();g.fillText(i.e,o.x,o.y+8)}
+function AIM(){const m=me&&me.t&&mm();if(!m)return;
+ if(m.hold>=0){const a=land();g.fillStyle='#fff';a.forEach((p,k)=>{if(k%2==0){g.globalAlpha=.75;g.beginPath();g.arc(p[0],p[1],2.5,0,7);g.fill()}});g.globalAlpha=1;
+  if(a.length){const e=a[a.length-1];g.strokeStyle='#ff4d6d';g.lineWidth=3;g.beginPath();g.arc(e[0],e[1],12+Math.sin(performance.now()/150)*2,0,7);g.stroke()}return}
+ let b=null,bd=52;S.I.forEach(i=>{if(i.st==0&&its[i.id]){const d=Math.hypot(its[i.id].x-me.x,its[i.id].y-me.y);if(d<bd){bd=d;b=i}}});
+ if(b){const o=its[b.id];g.font='bold 13px sans-serif';g.textAlign='center';g.fillStyle='#000a';rr(o.x-36,o.y-36,72,20,8);g.fillStyle='#fff';g.fillText('␣ Ambil',o.x,o.y-22)}}
+// ===== suara =====
+const snd=(f,d=.14,ty='sine',t=0,v=.14)=>{try{AC=AC||new AudioContext();const o=AC.createOscillator(),k=AC.createGain(),s=AC.currentTime+t;o.type=ty;o.frequency.value=f;k.gain.setValueAtTime(v,s);k.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(k);k.connect(AC.destination);o.start(s);o.stop(s+d)}catch(e){}};
+const seq=(a,ty='triangle')=>a.forEach((f,i)=>snd(f,.18,ty,i*.1));
+const sOk=()=>seq([523,659,784,1047]),sBad=()=>seq([220,165],'sawtooth'),sGate=()=>seq([392,523,659,784,1047]),sBoing=()=>{snd(500,.1,'square');snd(250,.25,'square',.08)},sWin=()=>seq([523,523,523,784,659,784,1047,1319]);
+const mel=[523,587,659,784,880,784,659,587,523,659,784,659];let mi=0;(function mus(){if(music&&me)snd(mel[mi++%mel.length],.22,'triangle',0,.035);setTimeout(mus,280/tempo)})();
+const bell=()=>{for(let i=0;i<6;i++)snd(i%2?880:1175,.4,'triangle',i*.24,.2)};setInterval(()=>{if(S.rn&&me&&(!LQ||Math.random()<.35))snd(1800+Math.random()*2500,.02,'square',0,.008)},90);
+const toast=m=>{const t=$('tt');t.textContent=m;t.style.display='block';clearTimeout(t.h);t.h=setTimeout(()=>t.style.display='none',2200)};
+const rain=(a,n=30)=>{if(LQ)n=Math.ceil(n/2);for(let i=0;i<n;i++){const d=document.createElement('div');d.className='fall';d.textContent=a[i%a.length];d.style.left=Math.random()*100+'vw';d.style.animationDuration=2+Math.random()*2.5+'s';d.style.animationDelay=Math.random()*1.2+'s';document.body.appendChild(d);setTimeout(()=>d.remove(),6000)}};
+// ===== masuk =====
+function gn(v){gen=v;$('gm').className=v=='m'?'on':'';$('gf').className=v=='f'?'on':''}
+// ===== JARINGAN tanpa server sendiri: pesan lewat broker MQTT publik (WebSocket) =====
+function mqttConnect(url){return new Promise((ok,no)=>{let done=0;const fail=e=>{if(!done){done=1;try{c.end(true)}catch(_){}no(e)}};const c=mqtt.connect(url,{clientId:'sb_'+CID+Math.random().toString(36).slice(2,6),clean:true,reconnectPeriod:2000,connectTimeout:7000,keepalive:30});
+ c.once('connect',()=>{if(!done){done=1;ok(c)}});c.once('error',fail);setTimeout(()=>fail(new Error('timeout')),8500)})}
+function onMsg(tp,buf){const s=typeof buf==='string'?buf:buf.toString();
+ if(HOSTMODE){if(tp===TP+ROOM+'/req'){let q;try{q=JSON.parse(s)}catch(e){return}if(!q||!q.u)return;HOST.handle(q.u,q.b||{}).then(d=>{if(q.r)NET.publish(TP+ROOM+'/res/'+q.c,JSON.stringify({r:q.r,d}))})}return}
+ if(tp===TP+ROOM+'/res/'+CID){let q;try{q=JSON.parse(s)}catch(e){return}const f=PEND[q.r];if(f){delete PEND[q.r];f(q.d)}return}
+ lastMsg=performance.now();try{onState(JSON.parse(s))}catch(e){console.error(e)}}
+function startTicker(){const f=()=>{if(!HOST)return;const n=Date.now(),s=HOST.tick();tk++;
+ if(s!==lastS||n-lastW>1500){lastS=s;lastW=n;NET.publish(TP+ROOM+'/st',s);lastMsg=performance.now();try{onState(JSON.parse(s))}catch(e){console.error(e)}}
+ if(tk%2==0&&(s!==lastL||n-lastLW>1500)){lastL=s;lastLW=n;NET.publish(TP+ROOM+'/stl',s)}};
+ if(typeof Worker!=='undefined'){try{const w=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),50)'],{type:'text/javascript'})));w.onmessage=f;return}catch(e){}}setInterval(f,50)}
+async function startHost(code){let d;try{d=await decQ(code,ENC)}catch(e){throw new Error('Kode guru salah!')}
+ HOST=createHost(d.Q,d.U,code);const sel=$('br').value,list=sel=='A'?BROKERS:BROKERS.filter(b=>b[0]==sel);let ok=null;
+ for(const b of list){try{NET=await mqttConnect(b[1]);ok=b;break}catch(e){}}
+ if(!ok){HOST=null;throw new Error('Tidak bisa tersambung ke jalur server publik. Coba jaringan lain atau pilih jalur lain.')}
+ ROOM=ok[0]+Array.from({length:4},()=>ALF[Math.floor(Math.random()*ALF.length)]).join('');HOSTMODE=true;
+ NET.on('message',onMsg);NET.on('error',()=>{});NET.on('offline',()=>toast('📶 Koneksi internet terputus, mencoba tersambung kembali…'));NET.subscribe(TP+ROOM+'/req');startTicker()}
+async function joinRoom(rc){const b=BROKERS.find(x=>x[0]==rc[0]);if(!b)throw new Error('Kode ruang tidak dikenal. Periksa lagi ya.');
+ try{NET=await mqttConnect(b[1])}catch(e){throw new Error('Tidak bisa tersambung ke internet. Coba jaringan lain.')}
+ ROOM=rc;NET.on('message',onMsg);NET.on('error',()=>{});NET.on('offline',()=>toast('📶 Koneksi terputus, mencoba tersambung kembali…'));
+ NET.subscribe(TP+ROOM+'/res/'+CID);NET.subscribe(TP+ROOM+'/'+(LQ?'stl':'st'))}
+function conn(){lastMsg=performance.now();if(HOSTMODE||!NET)return;try{NET.unsubscribe([TP+ROOM+'/st',TP+ROOM+'/stl'])}catch(e){}try{NET.subscribe(TP+ROOM+'/'+(LQ?'stl':'st'));NET.subscribe(TP+ROOM+'/res/'+CID)}catch(e){}}
+async function watch(){if(!me)return;const now=performance.now();if(now-lastMsg>6000){lastMsg=now;conn();if(!HOSTMODE)toast('⏳ Menunggu kabar dari ruang… pastikan guru masih membuka halamannya');return}
+ if(S.P.length&&!mm()){if(++missing>=2){missing=0;const r=await api('/join',JOINP);if(!r.err){me.id=r.id;me.x=r.x;me.y=r.y;toast('🔄 Tersambung ulang ke sekolah');conn()}}}else missing=0}
+const roomLink=()=>location.origin+location.pathname+'?r='+ROOM;
+function copyRoom(){const l=roomLink();try{navigator.clipboard.writeText(l).then(()=>toast('🔗 Link ruang disalin!'),()=>prompt('Salin link ini:',l))}catch(e){prompt('Salin link ini:',l)}}
+function pilihRole(r){ROLE=r;$('rc').style.display=r?'none':'block';$('cd').style.display=r?'block':'none';$('brw').style.display=r?'block':'none';$('jb').textContent=r?'Buat Ruang 🏫':'Masuk ke gerbang 🚪';$('rb0').className=r?'':'on';$('rb1').className=r?'on':''}
+addEventListener('beforeunload',()=>{if(me&&!HOSTMODE&&NET)try{NET.publish(TP+ROOM+'/req',JSON.stringify({c:CID,r:0,u:'/bye',b:{id:me.id}}))}catch(e){}});
+document.addEventListener('pointerdown',e=>{const a=document.activeElement;if(a&&a.tagName=='INPUT'&&e.target!==a)a.blur()});
+async function join(){try{AC=AC||new AudioContext()}catch(e){}
+ const name=$('nm').value.trim();if(!name)return $('je').textContent='Isi nama dulu ya!';
+ const code=$('cd').value;let r;$('je').textContent='⏳ Menghubungkan…';
+ try{
+  if(ROLE){if(!code)throw new Error('Isi kode guru dulu ya!');await startHost(code);r=await api('/join',{name,g:gen,code});if(r.err)throw new Error(r.err);HOST.P[r.id].local=true}
+  else{const rc=$('rc').value.trim().toUpperCase();if(rc.length<4)throw new Error('Isi kode ruang dari guru dulu ya!');await joinRoom(rc);r=await api('/join',{name,g:gen,code:''});if(r.err)throw new Error(r.err=='Koneksi putus 😢'?'Ruang tidak ditemukan. Cek kode ruang, dan pastikan guru sudah membuat ruang.':r.err)}
+ }catch(e){$('je').textContent=e.message||String(e);return}
+ me={id:r.id,t:r.t,x:r.x,y:r.y,name:r.name,fx:0,fy:1};$('join').style.display='none';$('cb').style.display='flex';lqb();$('hn').textContent=(me.t?'👑 Guru ':'🎒 ')+me.name;
+ $('hr').style.display='block';$('hr').textContent='🏫 Ruang: '+ROOM;
+ if(me.t){$('ht').style.display='flex';$('shc').textContent=ROOM;$('shl').value=roomLink();$('sh').style.display='flex'}else['hsb','hbd','hj','hc'].forEach(i=>$(i).style.display='block')
+ JOINP={name,g:gen,code:ROLE?code:''};conn();setInterval(watch,3000);setInterval(()=>{if(!HOSTMODE)api('/ping')},5000)}
+function hudT(){const h=$('hud');h.classList.toggle('cl');$('hb').textContent=h.classList.contains('cl')?'▶':'◀'}
+const mm=()=>S.P.find(p=>me&&p.id===me.id);
+function onState(d){S.P=d.p.map(a=>({id:a[0],n:a[1],g:a[2],t:a[3],x:a[4],y:a[5],s:a[6],seat:a[7],pts:a[8],ex:a[9],hold:a[10],tc:a[11],fa:a[12],say:a[13],ap:a[14],coin:a[15],hop:a[16],bm:a[17]}));S.tm=d.tm;S.rn=d.rn;S.an=d.an;S.fz=d.fz;S.bo=d.bo;S.ct=d.ct;S.I=d.i.map(a=>({id:a[0],e:a[1],x:a[2],y:a[3],z:a[4],st:a[5],by:a[6]}));S.I.forEach(i=>its[i.id]=its[i.id]||{x:i.x,y:i.y,z:i.z});S.b=d.b;S.m=d.m;S.g=d.g;
+ const ids={};S.P.forEach(p=>{ids[p.id]=1;const q=pp[p.id]=pp[p.id]||{x:p.x,y:p.y,w:0,tc:p.tc,ws:p.s};if(p.tc>q.tc){q.th=performance.now();seq([620,480,340],'sine')}q.tc=p.tc;if(p.s&&!q.ws)sBoing();q.ws=p.s;if(p.hop&&!q.wh){q.hs=performance.now();snd(520,.07,'sine',0,.07)}q.wh=p.hop;if(p.say!==q.say){q.say=p.say;q.st=performance.now();if(p.say&&p.id!=me.id)snd(900,.05,'sine',0,.06)}});for(const k in pp)if(!ids[k])delete pp[k];
+ if(S.g&&!lastG){bell();bellT=performance.now();rain(['🎉','🔓','✨'],18);toast(S.m=='ulangan'?'🔓 Gerbang dibuka! Mode ULANGAN — cari kursimu 🪑':'🔓 Gerbang dibuka! Mode TAMBAH POIN — cari kotak ❓')}
+ if(!S.g&&lastG)toast('🔒 Gerbang dikunci guru');lastG=S.g;if(S.an!==lastA){lastA=S.an;$('an').style.display=S.an?'block':'none';if(S.an){$('at').textContent='📢 '+S.an;seq([784,988,1175],'triangle')}}
+ if(S.fz!==lastF){lastF=S.fz;toast(S.fz?'🧊 Guru membekukan kelas — dengarkan instruksi!':'🔥 Kelas dicairkan, silakan bergerak')}
+ if(S.bo!==lastB){lastB=S.bo;if(S.bo>=0)toast('📋 Papan tulis: '+BDT[S.bo][0]+' — klik papan tulis untuk membaca');if($('bd').style.display=='flex')bdDraw()}
+ const ctv=S.ct?S.ct[2]:0;if(ctv&&!lastH){snd(700,.12,'triangle');snd(950,.18,'triangle',.1)}lastH=ctv;
+ const m=mm();if(!m)return;if(me.sit&&m.seat<0&&performance.now()-me.sitT>800)me.sit=0;$('hc').textContent='🪙 Koin: '+m.coin;if(me.bm===undefined)me.bm=m.bm;const nb=m.bm&~me.bm;if(nb){me.bm=m.bm;BDG.forEach((b,i)=>{if(nb>>i&1){toast('🏅 Lencana baru: '+b[0]+' '+b[1]+'!');seq([659,784,988,1319],'triangle');rain(['🏅','🎉','✨'],20)}})}
+ $('hm').textContent=S.g?(S.m=='ulangan'?'📝 Mode Ulangan':'⭐ Mode Tambah Poin'):'🔒 Gerbang terkunci';
+ $('hp').style.display=S.m=='poin'&&!me.t?'block':'none';$('hp').textContent='⭐ Poin: '+m.pts;$('hl').style.display=me.t&&S.m=='poin'?'inline-block':'none';
+ $('rd').style.display=(!me.t&&m.seat>=0&&S.m=='ulangan'&&m.ex===null&&!modal)?'block':'none';
+ if(!me.t&&!S.g&&me.y>=700&&!modal)$('hm').textContent='🔒 Tunggu guru membuka gerbang ⏳';
+ if($('pn').style.display=='flex')pn(1);if($('ky').style.display=='flex')keyDraw();if($('ld').style.display=='flex')ld(1)}
+// ===== guru =====
+window.act=(a,t,m,x)=>api('/act',{a,t,m,x});
+let PSIG='';function pn(r){const st=S.P.filter(p=>!p.t);const sg=st.map(p=>[p.id,p.n,p.ex,p.pts,p.bm].join()).join('|');if(r&&sg===PSIG)return;PSIG=sg;$('pl').innerHTML=st.length?'<table style="width:100%;text-align:left">'+st.map(p=>`<tr><td>${p.g=='f'?'👧':'👦'} ${p.n}</td><td>${p.ex===null?'—':p.ex>=0?'Nilai <b>'+p.ex+'</b>'+(p.ex>=80?' ✅':' ❌'):'✍️ soal '+(-p.ex)}</td><td>⭐${p.pts} 🏅${bc(p.bm)}</td><td><button onclick="act('reset',${p.id})">🔄 Reset</button><button onclick="act('slap',${p.id})">👋</button></td></tr>`).join('')+'</table>':'Belum ada siswa.';$('pn').style.display='flex'}
+let LSIG='';function ld(r){const a=S.P.filter(p=>!p.t).sort((x,y)=>y.pts-x.pts).slice(0,10);const sg=a.map(p=>p.id+':'+p.pts).join();if(r&&sg===LSIG)return;LSIG=sg;$('ll').innerHTML=a.map((p,i)=>`<div style="font-size:20px;padding:4px">${['🥇','🥈','🥉'][i]||i+1+'.'} ${p.n} — <b>${p.pts}</b> ⭐</div>`).join('')||'Belum ada poin.';$('ld').style.display='flex'}
+// ===== chat & toko =====
+function stand(){me.sit=0;me.y=Math.min(me.y+22,860);dirty=1;toast('Kamu berdiri 🚶')}
+const say=m=>{if(m&&me)api('/chat',{m})};
+$('ci').onkeydown=e=>{if(e.key=='Enter'){say($('ci').value);$('ci').value='';$('ci').blur()}e.stopPropagation()};
+const SHOP=[['h1','🧢 Topi Merah',20],['h2','🎩 Topi Sulap',30],['h3','👑 Mahkota',50],['g1','😎 Kacamata Hitam',20],['g2','🤓 Kacamata Bulat',20],['c1','💗 Rambut Pink',10],['c2','💙 Rambut Biru',10],['c3','💛 Rambut Emas',10]],NONE=[['h0','Lepas topi'],['g0','Lepas kacamata'],['c0','Rambut asli']];let own={};
+async function shop(){const r=await api('/shop');own=r.own||{};shopDraw(r.coin)}
+function shopDraw(c){const m=mm(),ap=m?m.ap:0,eq={h:Math.floor(ap/100),g:Math.floor(ap/10)%10,c:ap%10};
+ $('sl').innerHTML=`<p>🪙 Koinmu: <b>${c}</b><br><small>Koin didapat dari jawaban benar di mode poin dan dari nilai ulangan</small></p>`+SHOP.map(i=>`<button class="${eq[i[0][0]]==i[0][1]?'ok':''}" onclick="buy('${i[0]}')">${i[1]} ${own[i[0]]?(eq[i[0][0]]==i[0][1]?'✓ dipakai':'Pakai'):'🪙'+i[2]}</button>`).join(' ')+'<hr>'+NONE.map(i=>`<button style="background:#888" onclick="buy('${i[0]}')">${i[1]}</button>`).join(' ');$('sp').style.display='flex'}
+async function buy(k){const r=await api('/buy',{k});if(r.err){toast(r.err);sBad();return}own=r.own;sOk();setTimeout(()=>shopDraw(r.coin),120)}
+const bc=n=>{let c=0;for(n=n||0;n;n>>=1)c+=n&1;return c};
+const BDG=[['⚡','Si Paling Cepat','Jadi yang pertama menjawab benar di mode poin'],['🔥','Beruntun','3 jawaban benar berturut-turut'],['🌟','Pemburu Emas','Mendapat kotak emas'],['💯','Nilai Sempurna','Nilai ulangan 100'],['🎓','Lulus Ulangan','Nilai ulangan 80 ke atas'],['💪','Pantang Menyerah','Lulus setelah mengulang ulangan'],['😎','Gaya Keren','Membeli barang di toko'],['💬','Si Ramah','Mengirim 5 pesan obrolan']];
+function bdg(){const m=mm();$('bgl').innerHTML=BDG.map((b,i)=>`<div style="text-align:left;padding:6px 10px;margin:4px 0;border-radius:12px;background:${m.bm>>i&1?'#e8ffe8':'#eee'};opacity:${m.bm>>i&1?1:.55}"><span style="font-size:26px">${b[0]}</span> <b>${b[1]}</b><br><small>${b[2]}</small></div>`).join('');$('bg').style.display='flex'}
+
+const BDT=[
+  ['Fase Pembentukan Bumi', ['Dimulai dari Big Bang, bahan penyusun bumi telah ada bersama bahan planet lain','Melalui 8 fase: Big Bang, Bintang, Supernova, Nebula, Matahari, Akresi, Inti Bumi, dan Atmosfer','Fase akresi: materi bumi homogen (seragam), belum ada lautan/daratan','Bahan meteor tenggelam ke pusat bumi akibat berat jenisnya yang tinggi, membentuk inti bumi']],
+  ['Teori Tata Surya 1', ['Pasang Surut Gas (Jeans & Jeffreys): Bintang raksasa menarik gas Matahari jadi lidah pijar yang lalu pecah menjadi planet','Ledakan Besar (Big Bang): Gumpalan kabut raksasa berputar, bagian ringan terlempar membentuk cakram, dan meledak jadi galaksi','Materi ringan yang terlempar keluar mengalami kondensasi dan mendingin menjadi planet-planet']],
+  ['Teori Tata Surya 2', ['Kabut Nebula (Kant-Laplace): Gas kabut berputar sangat cepat, menyebabkan materi khatulistiwa terlempar berpisah lalu memadat','Planetesimal (Moulton-Chamberlain): Bintang melintas sangat dekat, materi gas Matahari ditarik lalu menyusut menjadi planetesimal','Bintang Kembar (Lyttleton): Dari sepasang bintang, satu meledak, pecahannya mengelilingi bintang tersisa (Matahari)']],
+  ['Suhu Awal Bumi', ['Bumi awal homogen (silikon, oksida besi, magma) dengan suhu yang relatif dingin','Suhu kemudian perlahan naik memanas karena 3 faktor utama: Akresi, Kompresi, dan Disintegrasi','Akresi: Bumi dihujani benda angkasa purba yang energinya berubah jadi panas','Kompresi: Gravitasi memadatkan bumi, suhu inti naik & besi mencair','Disintegrasi: Penguraian zat radioaktif (contoh: uranium, thorium, potasium) melepas panas yang besar']],
+  ['Teori Permukaan Bumi 1', ['Kontraksi (Descartes): Bumi menyusut karena pendinginan, permukaannya mengkerut seperti apel kering','Dua Benua (Zuess): Benua Laurasia (utara) & Gondwana (selatan) terus bergerak ke ekuator lalu pecah menjadi benua-benua kecil','Pengapungan Benua (Wegner): Benua raksasa Pangea terpecah akibat gerak sentripugal dari rotasi bumi','Bukti: Kesamaan garis pantai barat Afrika & timur Amerika Selatan, serta temuan batu dan fosil']],
+  ['Teori Permukaan Bumi 2', ['Konveksi (Holmes): Arus lava panas dari mantel bumi naik ke dasar samudera (Mid Oceanic Ridge) membentuk kulit baru','Lempeng Tektonik (Tozo Wilson): Kulit bumi terus bergerak karena arus konveksi di lapisan astenosfer','Gerak Konvergen: Bertubrukan (contoh: Subduksi samudera ke benua, Kolisi pegunungan Himalaya)','Gerak Divergen: Saling menjauh membentuk kerak samudera (Mid Ocean Ridges)','Gerak Transform (Mendatar): Bergesekan berlawanan arah (contoh: Sesar San Andreas)']],
+  ['Perkembangan Kehidupan', ['Arkaekum (2.500 jt tahun lalu): Suhu Bumi masih sangat panas berupa gas, belum ada kehidupan','Paleozoikum (340 jt tahun lalu): Muncul mikroorganisme pertama, amfibi, serangga, dan ikan tanpa rahang','Mesozoikum (150 jt tahun lalu): Era dominasi reptil raksasa/dinosaurus, iklim mulai menghangat','Neozoikum (60 jt tahun lalu): Tersier (Era mamalia, primata kera), Kuarter (Zaman es Pleistosen, dan manusia purba Holosen)']]
+];
+function bdOpen(){if(!me.t&&S.bo<0)return toast('Papan tulis masih kosong 📋');bdDraw();$('bd').style.display='flex'}
+function bdDraw(){const b=S.bo>=0?BDT[S.bo]:null;$('bdt').innerHTML=(me.t?BDT.map((x,i)=>`<button class="${S.bo==i?'ok':''}" onclick="act('board',${i})">${x[0].replace('Zaman ','')}</button>`).join('')+'<button style="background:#888" onclick="act(\'board\',-1)">Hapus</button><hr>':'')+(b?`<h2>${b[0]}</h2><ul style="text-align:left;font-size:18px;line-height:1.5">${b[1].map(l=>'<li>'+l+'</li>').join('')}</ul>`:'<p>Pilih ringkasan materi di atas untuk ditampilkan ke siswa.</p>')}
+function ann(){const t=prompt('Tulis pengumuman untuk semua siswa:');if(t)act('ann',0,0,t)}
+function csv(){const st=S.P.filter(p=>!p.t),r=[['Nama','Gender','Nilai Ulangan','Poin','Koin','Jumlah Lencana']].concat(st.map(p=>[p.n,p.g=='f'?'Cewek':'Cowok',p.ex===null?'':p.ex>=0?p.ex:'sedang mengerjakan',p.pts,p.coin,bc(p.bm)])),a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob(['\ufeff'+r.map(x=>x.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n')],{type:'text/csv'}));a.download='rekap-nilai.csv';a.click();toast('⬇️ Rekap nilai diunduh')}
+const QSEC=45; // detik per soal ulangan (ubah angka ini bila ingin lebih lama/cepat)
+let qt=0;function stopT(){clearInterval(qt);tempo=1}
+function startT(fn){clearInterval(qt);const t0=performance.now();qt=setInterval(()=>{const l=QSEC-(performance.now()-t0)/1000;$('qb').style.width=Math.max(0,l/QSEC*100)+'%';$('qb').style.background=l<10?'#e74c3c':'#2ecc71';tempo=l<10?2:1;if(l<=5&&l>0&&Math.abs(l-Math.round(l))<.1)snd(1000,.05,'square',0,.06);if(l<=0){stopT();toast('Waktu habis! ⏰');[...$('qo').children].forEach(x=>x.disabled=1);fn(-1,document.createElement('button'))}},200)}
+let KEYD=null;
+async function keyOpen(){if(!me||!me.t)return;const r=await api('/key');if(r.err)return toast(r.err);KEYD=r.k;KSIG='';$('kt').textContent=r.m=='ulangan'?'Kunci Ulangan ('+r.n+' soal)':'Kunci Mode Poin ('+r.n+' soal)';keyDraw();$('ky').style.display='flex'}
+let KSIG='';function keyDraw(){if(!KEYD)return;const sg=S.m+'|'+(S.m=='poin'?S.b.map(b=>b[0]).join():'')+'|'+$('ks').value+'|'+KEYD.length;if(sg===KSIG)return;KSIG=sg;const f=($('ks').value||'').toLowerCase();$('kl').innerHTML=KEYD.map((x,i)=>{if(f&&!x.q.toLowerCase().includes(f)&&!x.o[x.c].toLowerCase().includes(f))return '';const tk=S.m=='poin'&&!S.b.some(b=>b[0]==i);
+ return `<div style="margin:6px 0;padding:8px 10px;border-radius:10px;background:#f6f6f6"><b>${i+1}. ${x.q}</b>${S.m=='poin'?(tk?' <small style="color:#888">✔ sudah diambil</small>':' <small style="color:#e67e22">🟡 masih ada</small>'):''}<div style="font-size:14px">${x.o.map((o,j)=>j==x.c?'<div style="color:#1e8e3e;font-weight:800">✅ '+'ABCD'[j]+'. '+o+'</div>':'<div>'+'ABCD'[j]+'. '+o+'</div>').join('')}</div></div>`}).join('')}
+const dust=[],fp=[],TWC={};let GL=null;function mkGL(){GL=document.createElement('canvas');GL.width=GL.height=96;const c=GL.getContext('2d'),r=c.createRadialGradient(48,48,3,48,48,48);r.addColorStop(0,'rgba(255,214,120,.5)');r.addColorStop(1,'rgba(255,214,120,0)');c.fillStyle=r;c.fillRect(0,0,96,96)}
+function lqb(){$('hq').textContent=LQ?'⚡ Hemat: ON':'⚡ Hemat: OFF'}function lqT(){LQ=!LQ;lqSet=1;if(me)conn();lqb();toast(LQ?'⚡ Mode hemat: animasi dikurangi agar ringan':'✨ Mode hemat dimatikan')}let TAGS=[];
+function BUB(p,q,x,y,t){const m=p.say,age=t-(q.st||t);g.textAlign='center';
+ if(/^[\p{Extended_Pictographic}\u200d\ufe0f]{1,8}$/u.test(m)){x=Math.max(24,Math.min(W-24,x));y=Math.max(y,64);g.font='34px serif';g.globalAlpha=Math.max(0,1-age/4200);g.fillText(m,x+Math.sin(age/200)*6,y-8-Math.min(40,age/18));g.globalAlpha=1;return}
+ g.font='bold 14px sans-serif';const w=Math.min(220,g.measureText(m).width+20);x=Math.max(w/2+4,Math.min(W-w/2-4,x));g.fillStyle='#fff';rr(x-w/2,y-34,w,26,10);g.beginPath();g.moveTo(x-6,y-9);g.lineTo(x+6,y-9);g.lineTo(x,y-1);g.fill();g.fillStyle='#222';g.fillText(m,x,y-15,200)}
+const GP=()=>{pp[-1]=pp[-1]||{x:500,y:640,w:0};const near=S.P.some(p=>pp[p.id]&&Math.hypot(pp[p.id].x-500,pp[p.id].y-640)<180);return{id:-1,n:'Pak Satpam',g:'m',t:0,s:0,seat:-1,hold:-1,fa:90,ap:110,say:near?(S.g?'Silakan masuk, jangan lari ya! 🚶':'Gerbang masih dikunci 🔒'):'',tc:0,bm:0}};
+function CATD(t){const c=S.ct;if(!c)return;const x=c[0],y=c[1],hp=c[2],b=c[4]?-Math.abs(Math.sin(t/90))*4:0;g.fillStyle='#0003';g.beginPath();g.ellipse(x,y+8,10,4,0,0,7);g.fill();g.save();g.translate(x,y+b+(hp?-Math.abs(Math.sin(t/110))*10:0));g.scale(c[3]>0?-1:1,1);g.font='26px serif';g.textAlign='center';g.fillText('🐈',0,6);g.restore();g.font='bold 11px sans-serif';g.fillStyle='#000a';g.textAlign='center';g.fillText('Mimi',x,y-16);if(hp){g.font='18px serif';g.fillText('💕',x+Math.sin(t/120)*6,y-26-((t/20)%14))}}
+function PRE(t){TAGS=[];
+ g.fillStyle='#7a4a24';rr(558,104,84,22,5);g.fillStyle='#fff';rr(578,107,44,12,2);g.fillStyle='#c0392b';rr(586,128,28,13,4);g.font='bold 9px sans-serif';g.textAlign='center';g.fillStyle=me&&me.t?'#c0392b':'#555';g.fillText(me&&me.t?'🔑 KUNCI':'GURU',600,116);
+ if(S.bo>=0){g.fillStyle='#2f5d46';g.fillRect(476,56,248,42);g.fillStyle='#fff';g.font='bold 14px "Comic Sans MS",cursive';g.textAlign='center';g.fillText(BDT[S.bo][0],600,76);g.font='11px sans-serif';g.fillText('👆 klik papan tulis untuk membaca',600,92)}
+ {const a=Math.max(0,1-(t-bellT)/2500);g.save();g.translate(790,22);g.rotate(Math.sin(t/55)*.6*a);g.font='24px serif';g.textAlign='center';g.fillText('🔔',0,8);g.restore();g.font='22px serif';g.fillText(['☀️','🌇','🌙'][S.tm||0],410,30)}
+ S.P.forEach(p=>{const q=pp[p.id];if(q&&q.w&&p.seat<0){if(Math.random()<(LQ?.1:.3)&&dust.length<(LQ?25:70))dust.push({x:q.x+(Math.random()-.5)*8,y:q.y+15,vx:(Math.random()-.5)*16,vy:-8-Math.random()*8,s:t});const lx=q.lx===undefined?q.x:q.lx,ly=q.ly===undefined?q.y:q.ly;if(Math.hypot(q.x-lx,q.y-ly)>18){fp.push({x:q.x,y:q.y+15,s:t,k:q.fl^=1});if(fp.length>(LQ?50:160))fp.shift();q.lx=q.x;q.ly=q.y}}});
+ while(fp.length&&t-fp[0].s>2500)fp.shift();while(dust.length&&t-dust[0].s>500)dust.shift();
+ fp.forEach(f=>{g.fillStyle='rgba(60,40,20,'+(.28*(1-(t-f.s)/2500))+')';g.beginPath();g.ellipse(f.x+(f.k?-3:3),f.y,2.6,1.6,0,0,7);g.fill()});
+ dust.forEach(d=>{const a=(t-d.s)/500;g.fillStyle='rgba(215,195,150,'+.5*(1-a)+')';g.beginPath();g.arc(d.x+d.vx*a,d.y+d.vy*a,3+a*4,0,7);g.fill()});
+ CATD(t)}
+function OVL(t){const T=S.tm||0;
+ if(S.fz)S.P.forEach(p=>{const q=pp[p.id];if(p.t||!q)return;g.fillStyle='#bfeaff99';rr(q.x-15,q.y-48,30,70,10);g.font='16px serif';g.textAlign='center';g.fillText('❄️',q.x,q.y-32)});
+ if(T!=2)for(let i=0;i<(LQ?1:3);i++){g.font='20px serif';g.textAlign='center';g.fillText(i==1?'🕊️':'🐦',((t/35+i*480)%1500)-150,470+i*70+Math.sin(t/260+i*2)*14)}
+ if(T==1){g.fillStyle='rgba(255,130,40,.20)';g.fillRect(0,0,W,H)}
+ if(T==2){if(LQ&&!GL)mkGL();g.fillStyle='rgba(8,16,50,.5)';g.fillRect(0,0,W,H);g.globalCompositeOperation='screen';
+  [[525,640,70],[675,640,70],[165,250,150],[600,250,230],[1035,250,150]].concat(S.P.map(p=>pp[p.id]?[pp[p.id].x,pp[p.id].y,46]:[0,0,0])).forEach(a=>{if(!a[2])return;if(LQ&&GL){g.drawImage(GL,a[0]-a[2],a[1]-a[2],a[2]*2,a[2]*2);return}const r=g.createRadialGradient(a[0],a[1],3,a[0],a[1],a[2]);r.addColorStop(0,'rgba(255,214,120,.5)');r.addColorStop(1,'rgba(255,214,120,0)');g.fillStyle=r;g.fillRect(a[0]-a[2],a[1]-a[2],a[2]*2,a[2]*2)});g.globalCompositeOperation='source-over'}
+ if(S.rn){g.save();g.beginPath();g.rect(0,0,W,H);g.rect(40,44,1120,366);g.clip('evenodd');g.fillStyle='rgba(60,80,110,.16)';g.fillRect(0,0,W,H);g.strokeStyle='rgba(190,215,255,.7)';g.lineWidth=1.6;g.beginPath();for(let i=0;i<(LQ?60:150);i++){const x=(i*89.3+t*.12)%W,y=(i*61.7+t*.9)%H;g.moveTo(x,y);g.lineTo(x-3,y+13)}g.stroke();g.restore()}}
+// ===== soal =====
+function showQ(q,fn){modal=1;$('rd').style.display='none';$('qt').textContent=q.q;$('qp').textContent=q.n?`Soal ${q.i} dari ${q.n}`:(q.gold?'🌟 KOTAK EMAS! Poin 3x (+30)':'⭐ Soal Tambah Poin (+10)');$('qo').innerHTML='';
+ q.o.forEach((o,i)=>{const b=document.createElement('button');b.className='opt';b.textContent='ABCD'[i]+'. '+o;b.onclick=()=>{stopT();[...$('qo').children].forEach(x=>x.disabled=1);fn(i,b)};$('qo').appendChild(b)});$('qbw').style.display=q.n?'block':'none';if(q.n)startT(fn);$('q').style.display='flex'}
+const hideQ=()=>{modal=0;stopT();$('q').style.display='none'};
+async function openBox(i){const r=await api('/box',{b:i});if(r.err)return toast(r.err);
+ showQ(r.q,async(c,b)=>{const a=await api('/bans',{c});if(a.r){b.classList.add('ok');sOk();rain(['⭐','✨','🌟'],14);toast(a.gold?'🌟 Kotak emas! +'+a.add+' poin':a.bonus?'🔥 Beruntun x3! +'+a.add+' poin':'+'+a.add+' poin! ⭐')}else{b.classList.add('no');sBad();toast(a.late?'Yah, keduluan teman 😅':'Belum tepat, coba lagi 💪')}setTimeout(hideQ,1100)})}
+async function start(){const r=await api('/start');if(r.err)return toast(r.err);showQ(r.q,ansEx)}
+async function ansEx(c,b){const a=await api('/ans',{c});b.classList.add(a.r?'ok':'no');a.r?sOk():sBad();
+ setTimeout(()=>{if(a.next)showQ(a.next,ansEx);else{hideQ();fin(a.sc)}},750)}
+function fin(s){me.sit=0;const w=s>=80;$('rt').textContent=w?'Congratulations! 🎉🥳🏆':'Nice try! 💪😊🌈';$('rsc').textContent='Nilaimu: '+s+' / 100';
+ $('rm').textContent=w?'Hebat! Kamu menguasai materi Bumi sebagai Ruang Kehidupan! 🦕':'Jangan menyerah! Minta guru mereset, lalu coba lagi ya 🔄';
+ $('rs').style.display='flex';w?(sWin(),rain(['🎉','🥳','🎊','⭐','🏆'],45)):(seq([392,440,523],'sine'),rain(['💪','😊','🌟','🌈'],30))}
+// ===== gerak & klik =====
+const seats=()=>{const n=Math.max(S.P.filter(p=>!p.t).length,1,...S.P.map(p=>p.seat+1));return Array.from({length:n},(_,i)=>[350+(i%8)*(500/7)+Math.floor(i/40)*24,175+(Math.floor(i/8)%5)*47])};
+function arrive(){if(!pend)return;const a=pend;pend=null;if(a.k=='box')openBox(a.i);else if(a.k=='tseat'){me.x=600;me.y=142;dirty=1;keyOpen()}else{me.sit=1;me.sitT=performance.now();dirty=0;me.x=a.x;me.y=a.y+8;api('/sit',{s:a.i,x:a.x,y:a.y}).then(r=>{if(r.err){me.sit=0;toast(r.err)}else{snd(660,.08);rain(['✨','🔥','📝'],10)}})}}
+cv.onpointerdown=e=>{if(!me||modal)return;try{AC&&AC.resume()}catch(_){}const wx=(e.clientX-ox)/sc,wy=(e.clientY-oy)/sc;if(wx>470&&wx<730&&wy>50&&wy<104&&S.bo>=0){bdOpen();return}const ct=S.ct;if(ct&&Math.hypot(ct[0]-wx,ct[1]-wy)<28){api('/cat').then(r=>r.err&&toast(r.err));return}if(me.sit)return;if(me.t&&Math.hypot(wx-600,wy-134)<34){tgt=[600,160];pend={k:'tseat'};return}
+ if(me.t){const v=S.P.find(p=>!p.t&&pp[p.id]&&Math.hypot(pp[p.id].x-wx,pp[p.id].y-wy)<28);if(v)return void act('slap',v.id)}
+ else{const b=S.b.find(b=>Math.hypot(b[1]-wx,b[2]-wy)<26);if(b){tgt=[b[1],b[2]+24];pend={k:'box',i:b[0]};return}
+  if(S.m=='ulangan'&&S.g){const sp=seats(),i=sp.findIndex(s=>Math.hypot(s[0]-wx,s[1]-wy)<28);if(i>=0){tgt=[sp[i][0],sp[i][1]+26];pend={k:'seat',i,x:sp[i][0],y:sp[i][1]};return}}}
+ tgt=[wx,wy];pend=null};
+onkeydown=e=>{if(e.target.tagName=='INPUT')return;if(e.key=='Enter'){if(me)$('ci').focus();return}if(e.key==' '){e.preventDefault();if(e.target.blur)e.target.blur();if(!e.repeat)space();return}keys[e.key.length>1?e.key:e.key.toLowerCase()]=1};onkeyup=e=>delete keys[e.key.length>1?e.key:e.key.toLowerCase()];
+setInterval(()=>{if(dirty&&me){dirty=0;api('/mv',{x:me.x,y:me.y,fx:me.fx,fy:me.fy,lv:me.sit?0:1})}},160);
+function update(dt){const m=mm();if(!m)return;
+ for(const p of S.P){const q=pp[p.id];if(p.id==me.id)continue;const dx=p.x-q.x,dy=p.y-q.y;q.w=Math.hypot(dx,dy)>1.5;q.x+=dx*.25;q.y+=dy*.25}
+ S.I.forEach(i=>{const o=its[i.id];if(i.st==1&&pp[i.by]){o.x=pp[i.by].x;o.y=pp[i.by].y;o.z=0}else{o.x+=(i.x-o.x)*.5;o.y+=(i.y-o.y)*.5;o.z+=(i.z-o.z)*.5}});const lock=modal||m.s||(S.fz&&!me.t)||(m.ex!==null&&m.ex<0);let mx=0,my=0;
+ if(!lock){const kx=!!(keys.ArrowRight||keys.d)-!!(keys.ArrowLeft||keys.a),ky=!!(keys.ArrowDown||keys.s)-!!(keys.ArrowUp||keys.w);
+  if(kx||ky){tgt=null;pend=null;const l=Math.hypot(kx,ky);mx=kx/l;my=ky/l}
+  else if(tgt){const dx=tgt[0]-me.x,dy=tgt[1]-me.y,d=Math.hypot(dx,dy);if(d<6){tgt=null;arrive()}else{mx=dx/d;my=dy/d}}}
+ if((mx||my)&&Math.hypot(mx-me.fx,my-me.fy)>.05){me.fx=mx;me.fy=my;dirty=1}
+ let moved=false;if(mx||my){const [nx,ny]=cl(me.x,me.y,me.x+mx*190*dt,me.y+my*190*dt,me.t,S.g);moved=Math.hypot(nx-me.x,ny-me.y)>.05;if(moved){me.x=nx;me.y=ny;dirty=1;me.sit=0;if(Math.random()<.04)snd(300+Math.random()*80,.05,'sine',0,.05)}else if(tgt){tgt=null;pend=null}}
+ pp[me.id]=pp[me.id]||{x:me.x,y:me.y,w:0};pp[me.id].x=me.x;pp[me.id].y=me.y;pp[me.id].w=moved}
+// ===== gambar =====
+const rr=(x,y,w,h,r=6)=>{g.beginPath();g.roundRect(x,y,w,h,r);g.fill()};
+function tree(x,y){g.fillStyle='#8b5a2b';g.fillRect(x-6,y-6,12,28);g.fillStyle='#2e9e4f';[[0,-30,26],[-14,-14,20],[14,-14,20]].forEach(a=>{g.beginPath();g.arc(x+a[0],y+a[1],a[2],0,7);g.fill()})}
+function char(p,t){const q=pp[p.id];if(!q)return;const seated=p.seat>=0,x=q.x,y=q.y,w=q.w&&!seated,bob=w?Math.sin(t/70)*3:Math.sin(t/400+p.id)*1.2,sh=w?Math.sin(t/70):Math.sin(t/500+p.id)*.2,hd=p.hold>=0,th=q.th&&t-q.th<350?(t-q.th)/350:-1,fx=Math.cos(p.fa/57.3),fy=Math.sin(p.fa/57.3),ap=p.ap||0,hcol=['','#ff5fa2','#3a86ff','#ffd23f'][ap%10],sk='#ffd9b3',sc2=p.t?'#2d5bd8':`hsl(${p.id*67%360} 70% 55%)`;
+ const hy=q.hs&&t-q.hs<400?-Math.sin((t-q.hs)/400*Math.PI)*22:0;g.save();g.translate(x,y+hy);if(p.s)g.rotate(Math.sin(t/60)*.22);g.fillStyle='#0003';g.beginPath();g.ellipse(0,16-hy,13,5,0,0,7);g.fill();
+ const lg=w?Math.sin(t/70)*4:0;g.fillStyle='#34495e';g.fillRect(-7,6,5,10+lg);g.fillRect(2,6,5,10-lg);
+ g.fillStyle=sc2;rr(-10,-12+bob,20,19,6);
+ g.fillStyle=sk;g.beginPath();g.arc(0,-21+bob,10,0,7);g.fill();
+ if(p.g=='f'){g.fillStyle=hcol||'#7b3f1d';rr(-11,-30+bob,22,11,6);rr(-12,-24+bob,5,18,3);rr(7,-24+bob,5,18,3);g.fillStyle='#ff5fa2';g.beginPath();g.arc(8,-30+bob,4,0,7);g.arc(13,-27+bob,3.5,0,7);g.fill()}
+ else{g.fillStyle=hcol||'#3b2a20';g.beginPath();g.arc(0,-23+bob,10.5,Math.PI,0);g.fill();rr(-11,-24+bob,4,6,2)}
+ g.fillStyle='#222';if(p.s){g.font='bold 11px sans-serif';g.textAlign='center';g.fillText('@  @',0,-17+bob)}else{g.beginPath();g.arc(-3.5+fx*1.6,-20+bob+fy,1.6,0,7);g.arc(3.5+fx*1.6,-20+bob+fy,1.6,0,7);g.fill();g.strokeStyle='#222';g.lineWidth=1.2;g.beginPath();g.arc(0,-17+bob,3,.2,2.9);g.stroke()}
+ const hh=Math.floor(ap/100),gl=Math.floor(ap/10)%10;
+ if(gl==1){g.fillStyle='#111';rr(-9,-23+bob,8,6,2);rr(1,-23+bob,8,6,2);g.fillRect(-1,-22+bob,2,2)}
+ if(gl==2){g.strokeStyle='#222';g.lineWidth=1.6;g.beginPath();g.arc(-4,-20+bob,4,0,7);g.moveTo(8,-20+bob);g.arc(4,-20+bob,4,0,7);g.stroke()}
+ if(hh==1){g.fillStyle='#e74c3c';g.beginPath();g.arc(0,-25+bob,10.5,Math.PI,0);g.fill();rr(-2,-27+bob,14,4,2)}
+ if(hh==2){g.fillStyle='#222';rr(-8,-45+bob,16,17,2);rr(-12,-31+bob,24,4,2);g.fillStyle='#9b59b6';rr(-8,-36+bob,16,4,1)}
+ if(hh==3){g.fillStyle='#ffd23f';g.beginPath();g.moveTo(-9,-30+bob);g.lineTo(-9,-40+bob);g.lineTo(-4,-34+bob);g.lineTo(0,-42+bob);g.lineTo(4,-34+bob);g.lineTo(9,-40+bob);g.lineTo(9,-30+bob);g.fill();g.fillStyle='#e74c3c';g.beginPath();g.arc(0,-33+bob,2,0,7);g.fill()}
+ const lp=(a,b,k)=>[a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k];let L=[-2,9+sh*4],Rr=[2,9-sh*4];
+ if(p.s){L=[-6+Math.sin(t/45)*6,-14+Math.cos(t/55)*10];Rr=[6+Math.cos(t/50)*6,-14+Math.sin(t/60)*10]}
+ else if(th>=0){const up=[[4,-22],[-4,-22]],fw=[[fx*17+4,fy*11-4],[fx*17-4,fy*11-4]],hg=[[-2,9],[2,9]],k=th<.45?th/.45:(th-.45)/.55,A=th<.45?[lp(up[0],fw[0],k),lp(up[1],fw[1],k)]:[lp(fw[0],hg[0],k),lp(fw[1],hg[1],k)];L=A[0];Rr=A[1]}
+ else if(hd){L=[4,-22+Math.sin(t/200)*1.5];Rr=[-4,-22+Math.sin(t/200)*1.5]}
+ else if(seated){L=[3,-5+Math.sin(t/110+p.id)*2];Rr=[-3,-5+Math.cos(t/130+p.id)*2]}
+ const arm=(sx,h)=>{g.strokeStyle=sc2;g.lineWidth=5;g.lineCap='round';g.beginPath();g.moveTo(sx,-8+bob);g.lineTo(sx+h[0],-8+bob+h[1]);g.stroke();g.fillStyle=sk;g.beginPath();g.arc(sx+h[0],-8+bob+h[1],3.3,0,7);g.fill()};arm(-10,L);arm(10,Rr);
+ if(p.s){g.font='16px sans-serif';g.textAlign='center';for(let k=0;k<3;k++){const a=t/130+k*2.1;g.fillText('⭐',Math.cos(a)*16,-38+Math.sin(a)*5+bob)}}
+ g.restore();const ty=hd?-72:hh>=2?-62:-56;
+ g.font='bold 13px sans-serif';g.textAlign='center';const nm=(p.t?'👑 Guru ':'')+p.n,tw=(TWC[nm]=TWC[nm]||g.measureText(nm).width)+22,tx=Math.max(tw/2+4,Math.min(W-tw/2-4,x));
+ let tv=Math.max(4,y+ty);while(TAGS.some(r=>Math.abs(r[0]-tx)<(r[2]+tw)/2+2&&Math.abs(r[1]-tv)<20)&&tv>24)tv-=20;TAGS.push([tx,tv,tw]);
+ g.fillStyle=p.t?'#2d5bd8e6':'#20222ce6';rr(tx-tw/2,tv,tw,18,9);g.fillStyle=p.t?'#ffd23f':'#3ddc84';g.beginPath();g.arc(tx-tw/2+9,tv+9,3.5,0,7);g.fill();g.fillStyle='#fff';g.fillText(nm,tx+5,tv+13);if(p.say)BUB(p,q,tx,Math.max(40,tv),t)}
+function scene(c){
+const R=(x,y,w,h,f,r=4)=>{c.fillStyle=f;c.beginPath();c.roundRect(x,y,w,h,r);c.fill()},
+O=(x,y,r,f)=>{c.fillStyle=f;c.beginPath();c.arc(x,y,r,0,7);c.fill()},
+T=(s,x,y,f='bold 15px sans-serif',k='#fff')=>{c.font=f;c.fillStyle=k;c.textAlign='center';c.fillText(s,x,y)},
+L=(a,b,d,e,k,w=10)=>{c.strokeStyle=k;c.lineWidth=w;c.lineCap='round';c.beginPath();c.moveTo(a,b);c.lineTo(d,e);c.stroke()};
+let s=11;const rd=()=>(s=s*16807%2147483647)/2147483647;
+R(0,0,W,712,'#8fd884',0);
+for(let i=0;i<260;i++){const x=rd()*W,y=60+rd()*650,k=i%2?'#7cc874':'#a6e79b';L(x,y,x-2,y-6,k,2);L(x,y,x+3,y-5,k,2)}
+for(let i=0;i<40;i++)O(rd()*W,430+rd()*250,3,['#ff6b9d','#fff','#ffd23f','#c77dff'][i%4]);
+R(540,410,120,302,'#e6d3ae',0);R(534,410,7,302,'#c9b283',0);R(659,410,7,302,'#c9b283',0);for(let y=440;y<712;y+=30)L(541,y,659,y,'#d3bf95',2);
+R(850,450,300,190,'#d9733a',10);c.strokeStyle='#fff';c.lineWidth=3;c.strokeRect(862,462,276,166);L(1000,462,1000,628,'#fff',3);c.beginPath();c.arc(1000,545,28,0,7);c.stroke();R(852,520,8,50,'#fff',2);R(1140,520,8,50,'#fff',2);T('🏀',1000,553,'22px serif');
+[[380,'#ff6b9d'],[710,'#ffd23f']].forEach(a=>{R(a[0],610,110,24,'#8d5a3b',10);for(let i=0;i<7;i++)O(a[0]+12+i*14,622,5,[a[1],'#fff','#c77dff'][i%3])});
+R(40,40,250,370,'#dbe9f4',0);for(let i=0;i<10;i++)for(let j=0;j<15;j++)if((i+j)%2)R(40+i*25,40+j*25,25,25,'#c3d9ea',0);
+R(290,40,620,370,'#e8bd86',0);for(let y=40;y<410;y+=28)L(290,y,910,y,'#d5a56c',2);
+R(910,40,250,370,'#c4b0e8',0);c.strokeStyle='#a58fd6';c.lineWidth=4;c.strokeRect(926,56,218,338);
+R(0,0,W,40,'#b5523b',0);for(let x=0;x<W;x+=24)L(x,0,x,40,'#9c4430',2);R(470,4,260,32,'#ffd23f',8);T('🏫 SEKOLAH BUMI',600,27,'bold 20px "Trebuchet MS",sans-serif','#6b2d1a');
+const wl='#8a3b2a';L(40,40,1160,40,wl);L(40,40,40,410,wl);L(1160,40,1160,410,wl);
+[[40,130],[190,540],[660,1010],[1070,1160]].forEach(a=>L(a[0],410,a[1],410,wl));
+L(290,40,290,330,wl,8);L(290,380,290,410,wl,8);L(910,40,910,330,wl,8);L(910,380,910,410,wl,8);
+[160,1040].forEach(x=>R(x-35,404,70,12,'#d9a441',3));R(545,404,110,12,'#d9a441',3);
+[110,215,370,470,740,840,990,1080].forEach(x=>{R(x-28,48,56,26,'#aee0ff',3);L(x,48,x,74,'#fff',3);L(x-28,61,x+28,61,'#fff',3)});
+R(470,50,260,54,'#a9743f',6);R(476,56,248,42,'#2f5d46',4);T('Pembentukan Alam & Bumi',600,83,'15px "Comic Sans MS",cursive','#fff');R(480,98,240,4,'#e8e1d0',2);
+O(430,80,15,'#fff');L(430,80,430,70,'#222',2);L(430,80,438,84,'#222',2);
+R(320,52,68,50,'#bfe3ff',4);T('🌍',354,90,'30px serif');R(790,52,68,50,'#ffe08a',4);T('✨',824,90,'30px serif');T('🪴',318,392,'28px serif');T('🪴',882,392,'28px serif');
+T('RUANG GURU',165,100,'bold 15px sans-serif','#355');R(80,130,160,50,'#8b5a2b',6);R(84,134,152,10,'#a0663a',3);T('💻',165,168,'26px serif');T('🏆',105,160,'22px serif');R(150,190,32,20,'#c0392b',6);R(50,230,44,96,'#9aa5b1',4);T('🗄️',72,288,'26px serif');T('🪴',255,396,'26px serif');
+T('PERPUSTAKAAN',1035,100,'bold 15px sans-serif','#4a3a7a');
+for(let r=0;r<2;r++){R(930,115+r*50,200,34,'#7a4a2a',4);for(let i=0;i<14;i++)R(934+i*14,118+r*50,10,28,['#e74c3c','#3498db','#f1c40f','#2ecc71','#9b59b6'][(i+r)%5],2)}
+R(990,255,110,64,'#a0663a',12);T('📚',1045,296,'26px serif');[[975,287],[1115,287],[1045,246],[1045,330]].forEach(a=>O(a[0],a[1],11,'#6c5ce7'));O(950,378,22,'#ff7aa8');O(1110,375,20,'#74b9ff');
+const bn=(x,y)=>{R(x,y,70,9,'#a0663a',3);R(x,y+12,70,6,'#8b5a2b',3);R(x+6,y+18,6,10,'#555',1);R(x+58,y+18,6,10,'#555',1)};bn(440,650);bn(690,650);
+const tr=(x,y)=>{c.fillStyle='#0002';c.beginPath();c.ellipse(x,y+24,32,8,0,0,7);c.fill();R(x-6,y-4,12,28,'#7a4a24',3);O(x,y-30,28,'#2c9a4b');O(x-18,y-14,22,'#2c9a4b');O(x+18,y-14,22,'#2c9a4b');O(x-8,y-38,13,'#4cc06a');O(x+14,y-22,8,'#4cc06a')};
+[[70,490],[150,580],[250,500],[90,640],[320,560],[820,480],[840,650],[1160,670]].forEach(a=>tr(a[0],a[1]));
+for(let x=60;x<1150;x+=70)if(!((x>110&&x<210)||(x>520&&x<680)||(x>990&&x<1090))){O(x,424,13,'#3d9a52');O(x+8,420,8,'#58b86d')}
+R(0,712,W,28,'#d9dce1',0);R(0,740,W,160,'#6f7580',0);for(let x=20;x<W;x+=140)R(x,818,70,7,'#ffe066',2);for(let i=0;i<8;i++)R(540+i*16,748,9,38,'#fff',2);
+for(let x=6;x<W;x+=18)if(x<505||x>690)R(x,676,10,34,'#fff',2);
+[[0,505],[695,W]].forEach(a=>{R(a[0],687,a[1]-a[0],5,'#e5e5e5',1);R(a[0],700,a[1]-a[0],5,'#e5e5e5',1)});
+for(let x=0;x<=W;x+=115)if(x<490||x>710)R(x-7,662,14,52,'#9c4430',3);
+R(510,648,30,66,'#9c4430',4);R(660,648,30,66,'#9c4430',4);O(525,644,9,'#ffd23f');O(675,644,9,'#ffd23f');R(540,636,120,22,'#2b3a55',6);T('GERBANG SEKOLAH',600,652,'bold 12px sans-serif');
+R(880,790,230,72,'#f7b500',14);for(let i=0;i<5;i++)R(895+i*40,800,32,24,'#aee0ff',4);R(880,836,230,8,'#d99a00',2);T('SEKOLAH',995,856,'bold 11px sans-serif','#333');[930,1060].forEach(x=>{O(x,866,13,'#222');O(x,866,6,'#aaa')});
+R(110,752,150,9,'#3a86ff',3);R(114,761,6,40,'#555',1);R(250,761,6,40,'#555',1);R(130,786,100,9,'#a0663a',3);T('🚏',185,782,'22px serif')}
+let bgc;
+function draw(t){g.setTransform(1,0,0,1,0,0);g.fillStyle='#2b3a55';g.fillRect(0,0,cv.width,cv.height);g.setTransform(sc,0,0,sc,ox,oy);g.save();g.beginPath();g.rect(0,0,W,H);g.clip();
+ if(!bgc){bgc=document.createElement('canvas');bgc.width=W;bgc.height=H;scene(bgc.getContext('2d'))}
+ g.drawImage(bgc,0,0);
+ g.fillStyle='#8a8f98';g.fillRect(398,418,6,150);g.fillStyle='#ffd23f';g.beginPath();g.arc(401,416,5,0,7);g.fill();
+ [[424,436,'#e74c3c'],[436,448,'#fff']].forEach(a=>{g.fillStyle=a[2];g.beginPath();g.moveTo(404,a[0]);for(let k=0;k<=22;k++)g.lineTo(404+k*2,a[0]+Math.sin(t/180+k*.5)*3);for(let k=22;k>=0;k--)g.lineTo(404+k*2,a[1]+Math.sin(t/180+k*.5)*3);g.fill()});
+ if(S.g){g.fillStyle='#2d3436';rr(542,672,7,40,2);rr(651,672,7,40,2)}else[542,601].forEach(x=>{g.fillStyle='#2d3436';rr(x,672,57,40,3);g.strokeStyle='#b2bec3';g.lineWidth=2;for(let i=7;i<57;i+=9){g.beginPath();g.moveTo(x+i,676);g.lineTo(x+i,708);g.stroke()}});
+ g.font='24px serif';g.textAlign='center';g.fillText(S.g?'🔓':'🔒',600,630+Math.sin(t/300)*2);
+ if(S.m=='ulangan'&&S.g){const tk={};S.P.forEach(p=>{if(p.seat>=0)tk[p.seat]=1});seats().forEach((s,i)=>{g.fillStyle='#b5763f';rr(s[0]-20,s[1]-28,40,18,4);g.fillStyle='#fff';rr(s[0]-7,s[1]-26,14,9,2);g.fillStyle=tk[i]?'#8a8f98':'#4a7bd0';rr(s[0]-11,s[1]-8,22,5,2);rr(s[0]-11,s[1]-3,22,9,3);if(!tk[i]){g.globalAlpha=.4+.4*Math.sin(t/300+i);g.strokeStyle='#fff';g.lineWidth=3;g.beginPath();g.arc(s[0],s[1]+2,17,0,7);g.stroke();g.globalAlpha=1}})}
+ S.b.forEach(b=>{const o=Math.sin(t/260+b[0])*4;g.shadowColor=b[3]?'#fff176':'#ffd23f';g.shadowBlur=LQ?0:(b[3]?26:14);g.fillStyle=b[3]?'#ffe14d':'#ffc61a';rr(b[1]-16,b[2]-16+o,32,32,8);g.shadowBlur=0;g.fillStyle='#e74c3c';g.fillRect(b[1]-3,b[2]-16+o,6,32);g.fillStyle='#fff';g.font='bold 20px sans-serif';g.fillText(b[3]?'★':'?',b[1]+12,b[2]+8+o)});
+ for(let i=0;i<3;i++){g.fillStyle='#0000000f';g.beginPath();g.ellipse(((t/70+i*520)%1700)-250,230+i*210,150,60,0,0,7);g.fill()}
+ g.font='16px serif';for(let i=0;i<(LQ?2:5);i++)g.fillText('🦋',200+i*190+Math.sin(t/900+i)*60,520+Math.cos(t/700+i*2)*50);
+ PRE(t);S.I.forEach(i=>i.st==0&&itm(i,t));[...S.P,GP()].sort((a,b)=>(pp[a.id]?pp[a.id].y:0)-(pp[b.id]?pp[b.id].y:0)).forEach(p=>char(p,t));S.I.forEach(i=>i.st&&itm(i,t));OVL(t);AIM();g.restore()}
+let last=performance.now();(function loop(t){const dt=Math.min(.05,(t-last)/1000);last=t;acc+=dt;
+ if(me&&!(LQ&&acc<.028)){try{update(Math.min(.06,acc));acc=0;draw(t)}catch(e){acc=0;console.error(e);for(let i=0;i<8;i++)g.restore()}if(!ft)ft=t;if(++fr==90){const av=(t-ft)/90;ft=t;fr=0;if(av>26&&!LQ&&!lqSet){LQ=true;lqb();conn();toast('⚡ Mode hemat aktif otomatis agar tidak lag')}}}
+ requestAnimationFrame(loop)})(last);
+pilihRole(0);{const q=new URLSearchParams(location.search).get('r');if(q)$('rc').value=q.toUpperCase()}
+</script></body></html>
