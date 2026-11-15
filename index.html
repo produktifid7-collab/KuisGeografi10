@@ -240,6 +240,28 @@ const api=(u,b={})=>{b={...b,id:me&&me.id};if(HOSTMODE)return HOST.handle(u,b);r
 const WALLS=[[0,0,1200,44],[36,40,44,410],[1156,40,1164,410],[40,406,130,414],[190,406,540,414],[660,406,1010,414],[1070,406,1160,414],[286,40,294,330],[286,380,294,410],[906,40,914,330],[906,380,914,410],[0,672,512,714],[688,672,1200,714],[510,648,540,714],[660,648,690,714]];
 const hit=(x,y,t,gt)=>WALLS.some(r=>x>r[0]-9&&x<r[2]+9&&y>r[1]-7&&y<r[3]+7)||(!gt&&!t&&x>535&&x<665&&y>664&&y<720);
 const cl=(px,py,nx,ny,t,gt)=>{nx=Math.max(20,Math.min(W-20,nx));ny=Math.max(20,Math.min(H-20,ny));if(hit(px,py,t,gt)||!hit(nx,ny,t,gt))return[nx,ny];if(!hit(nx,py,t,gt))return[nx,py];if(!hit(px,ny,t,gt))return[px,ny];return[px,py]};
+// ===== PERBAIKAN: pencari jalan (pathfinding) supaya klik kursi/kotak tidak tersangkut dinding tak terlihat =====
+const GS=12,GW=Math.ceil(W/GS),GH=Math.ceil(H/GS);let PATH=[];
+const blk=(x,y)=>hit(x,y,me.t,S.g);
+function los(ax,ay,bx,by){const n=Math.max(1,Math.ceil(Math.hypot(bx-ax,by-ay)/4));for(let i=1;i<=n;i++){const k=i/n;if(blk(ax+(bx-ax)*k,ay+(by-ay)*k))return false}return true}
+function nearFree(x,y){if(!blk(x,y))return[x,y];for(let r=6;r<=150;r+=6)for(let a=0;a<16;a++){const nx=x+Math.cos(a*Math.PI/8)*r,ny=y+Math.sin(a*Math.PI/8)*r;if(nx>20&&nx<W-20&&ny>20&&ny<H-20&&!blk(nx,ny))return[nx,ny]}return[x,y]}
+function findPath(sx,sy,tx,ty){
+ const e=nearFree(tx,ty),s=nearFree(sx,sy);
+ if(los(sx,sy,e[0],e[1]))return[e];
+ const cx=x=>Math.max(0,Math.min(GW-1,Math.floor(x/GS))),cy=y=>Math.max(0,Math.min(GH-1,Math.floor(y/GS))),N=GW*GH,gS=new Float32Array(N).fill(1e9),par=new Int32Array(N).fill(-1),cls=new Uint8Array(N),fr=new Uint8Array(N);
+ const F=i=>{if(!fr[i])fr[i]=blk((i%GW)*GS+GS/2,Math.floor(i/GW)*GS+GS/2)?2:1;return fr[i]==1};
+ const hp=[],push=(f,i)=>{hp.push([f,i]);let k=hp.length-1;while(k>0){const p=(k-1)>>1;if(hp[p][0]<=hp[k][0])break;[hp[p],hp[k]]=[hp[k],hp[p]];k=p}},
+ pop=()=>{const t=hp[0],l=hp.pop();if(hp.length){hp[0]=l;let k=0;for(;;){const a=2*k+1,b=a+1;let m=k;if(a<hp.length&&hp[a][0]<hp[m][0])m=a;if(b<hp.length&&hp[b][0]<hp[m][0])m=b;if(m==k)break;[hp[m],hp[k]]=[hp[k],hp[m]];k=m}}return t};
+ const si=cy(s[1])*GW+cx(s[0]),gi=cy(e[1])*GW+cx(e[0]),gx=gi%GW,gy=Math.floor(gi/GW),hf=i=>{const dx=Math.abs(i%GW-gx),dy=Math.abs(Math.floor(i/GW)-gy);return Math.max(dx,dy)+.414*Math.min(dx,dy)};
+ gS[si]=0;push(hf(si),si);let found=false;
+ while(hp.length){const i=pop()[1];if(cls[i])continue;cls[i]=1;if(i==gi){found=true;break}
+  const x=i%GW,y=Math.floor(i/GW);
+  for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++){if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=GW||ny>=GH)continue;const j=ny*GW+nx;if(cls[j])continue;if(j!=gi&&!F(j))continue;if(dx&&dy&&(!F(y*GW+nx)||!F(ny*GW+x)))continue;const c=gS[i]+(dx&&dy?1.414:1);if(c<gS[j]){gS[j]=c;par[j]=i;push(c+hf(j),j)}}}
+ if(!found)return[[tx,ty]];
+ const pts=[];for(let i=gi;i!=-1;i=par[i])pts.push([(i%GW)*GS+GS/2,Math.floor(i/GW)*GS+GS/2]);pts.reverse();pts[0]=[sx,sy];pts[pts.length-1]=e;
+ const out=[];let cur=pts[0],idx=0;while(idx<pts.length-1){let j=pts.length-1;while(j>idx+1&&!los(cur[0],cur[1],pts[j][0],pts[j][1]))j--;out.push(pts[j]);cur=pts[j];idx=j}
+ return out}
+function go(x,y){PATH=findPath(me.x,me.y,x,y);tgt=PATH.shift()||null}
 const its={};
 function land(){let x=me.x+me.fx*16,y=me.y+me.fy*10;if(hit(x,y,1,1)){x=me.x;y=me.y}const a=[];for(let i=0;i<18;i++){const nx=x+me.fx*21,ny=y+me.fy*21;if(hit(nx,ny,1,1)||nx<20||nx>1180||ny<20||ny>880)break;x=nx;y=ny;a.push([x,y])}return a}
 function space(){if(!me||modal)return;if(!me.t){if(!me.sit&&!S.fz)api('/hop');return}api('/space',{fx:me.fx,fy:me.fy}).then(r=>{if(r.msg){toast(r.msg);snd(880,.08)}})}
@@ -259,26 +281,25 @@ const sOk=()=>seq([523,659,784,1047]),sBad=()=>seq([220,165],'sawtooth'),sGate=(
 const mel=[523,587,659,784,880,784,659,587,523,659,784,659,880,1047,880,784,659,784,659,523,587,659,587,0,523,659,784,1047,880,784,659,0];
 let mi=0;(function mus(){if(music&&me){const f=mel[mi%mel.length];if(f)snd(f,.22,'triangle',0,.035);if(mi%4===0&&f)snd(f/2,.4,'sine',0,.04);mi++;}setTimeout(mus,280/tempo)})();
 const bell=()=>{for(let i=0;i<6;i++)snd(i%2?880:1175,.4,'triangle',i*.24,.2)};
-// ===== suara hujan & petir realistis =====
-let NB=null,RN=null,RON=-1;
-function nbuf(){if(NB)return NB;AC=AC||new AudioContext();const n=AC.sampleRate*4,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926}return NB=b}
-function rainLoop(on){if(on===RON)return;RON=on;try{AC=AC||new AudioContext();
- if(!RN){const m=AC.createGain();m.gain.value=0;m.connect(AC.destination);RN=m;
-  [[1800,.7,'lowpass',1.2],[4500,.5,'highpass',.7],[1000,.6,'bandpass',.8]].forEach(a=>{const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;const f=AC.createBiquadFilter();f.type=a[2];f.frequency.value=a[0];f.Q.value=a[1];const gg=AC.createGain();gg.gain.value=a[3];s.connect(f);f.connect(gg);gg.connect(m);s.start(0,Math.random()*3)})}
- RN.gain.setTargetAtTime(on?(LQ?.28:.4):0,AC.currentTime,.8)}catch(e){}}
-function drop(){try{const s=AC.createBufferSource();s.buffer=nbuf();const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=2500+Math.random()*4500;f.Q.value=3;const e=AC.createGain(),t=AC.currentTime;e.gain.setValueAtTime(.2+Math.random()*.3,t);e.gain.exponentialRampToValueAtTime(.001,t+.04);s.connect(f);f.connect(e);e.connect(AC.destination);s.start(t,Math.random()*3);s.stop(t+.05)}catch(e){}}
-function thunder(){try{AC=AC||new AudioContext();const t=AC.currentTime,far=Math.random(),T0=t+far*1.2,dur=3.5+Math.random()*3,m=AC.createGain();m.gain.value=.9-far*.4;m.connect(AC.destination);
- const src=()=>{const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;s.start(T0,Math.random()*3);s.stop(T0+dur+.2);return s};
- if(far<.6){const s=src(),f=AC.createBiquadFilter(),e=AC.createGain();f.type='highpass';f.frequency.value=900;e.gain.setValueAtTime(0,T0);e.gain.linearRampToValueAtTime(1.2,T0+.01);e.gain.exponentialRampToValueAtTime(.001,T0+.35);s.connect(f);f.connect(e);e.connect(m)}
- {const s=src(),f=AC.createBiquadFilter(),e=AC.createGain();f.type='lowpass';f.frequency.setValueAtTime(700-far*350,T0);f.frequency.exponentialRampToValueAtTime(90,T0+dur);e.gain.setValueAtTime(.001,T0);e.gain.linearRampToValueAtTime(1.6,T0+.08+far*.3);
-  for(let k=1;k<5;k++)e.gain.linearRampToValueAtTime((.4+Math.random()*.9)*(1-k/5),T0+.3+k*(dur-.6)/5);
-  e.gain.exponentialRampToValueAtTime(.001,T0+dur);s.connect(f);f.connect(e);e.connect(m)}
- {const o=AC.createOscillator(),e=AC.createGain();o.type='sine';o.frequency.setValueAtTime(60,T0);o.frequency.exponentialRampToValueAtTime(28,T0+dur);e.gain.setValueAtTime(.001,T0);e.gain.linearRampToValueAtTime(.5,T0+.1);e.gain.exponentialRampToValueAtTime(.001,T0+dur);o.connect(e);e.connect(m);o.start(T0);o.stop(T0+dur+.2)}}catch(e){}}
+// ===== PERBAIKAN: suara hujan & petir realistis (noise dengan filter, bukan bunyi bip) =====
+let NW=null,NB=null,RG=null;
+function nz(){if(NW||!AC)return;const sr=AC.sampleRate,w=AC.createBuffer(1,sr*3,sr),b=AC.createBuffer(1,sr*8,sr),a=w.getChannelData(0),c=b.getChannelData(0);let l=0;for(let i=0;i<a.length;i++)a[i]=Math.random()*2-1;for(let i=0;i<c.length;i++){l=(l+.02*(Math.random()*2-1))/1.02;c[i]=l*3.5}NW=w;NB=b}
+function rainAmb(on){try{if(!AC||(!on&&!RG))return;nz();if(!RG){RG=AC.createGain();RG.gain.value=0;RG.connect(AC.destination);
+ const mk=(f,type,q,gn)=>{const s=AC.createBufferSource(),fl=AC.createBiquadFilter(),k=AC.createGain();s.buffer=NW;s.loop=true;fl.type=type;fl.frequency.value=f;fl.Q.value=q;k.gain.value=gn;s.connect(fl);fl.connect(k);k.connect(RG);s.start(0,Math.random()*2)};
+ mk(5500,'highpass',.5,.22);mk(1800,'bandpass',.5,.55);mk(350,'lowpass',.7,.35)}
+ RG.gain.setTargetAtTime(on?.2:0,AC.currentTime,on?1.2:.6)}catch(e){}}
+function drop(){try{if(!AC)return;nz();const s=AC.createBufferSource(),f=AC.createBiquadFilter(),k=AC.createGain(),t=AC.currentTime,v=.015+Math.random()*.035;s.buffer=NW;f.type='bandpass';f.frequency.value=2500+Math.random()*4500;f.Q.value=2+Math.random()*3;k.gain.setValueAtTime(0,t);k.gain.linearRampToValueAtTime(v,t+.002);k.gain.exponentialRampToValueAtTime(.0001,t+.03+Math.random()*.04);s.connect(f);f.connect(k);k.connect(AC.destination);s.start(t,Math.random()*2,.12)}catch(e){}}
+function thunder(){try{AC=AC||new AudioContext();nz();const near=Math.random()<.4,v=near?1:.55,dur=near?4+Math.random()*2:5.5+Math.random()*2.5,t0=AC.currentTime+(near?0:.3+Math.random()*.6);
+ if(near){const c=AC.createBufferSource(),h=AC.createBiquadFilter(),k=AC.createGain();c.buffer=NW;h.type='highpass';h.frequency.value=900;k.gain.setValueAtTime(0,t0);k.gain.linearRampToValueAtTime(.55,t0+.004);k.gain.exponentialRampToValueAtTime(.05,t0+.2);k.gain.linearRampToValueAtTime(.25,t0+.24);k.gain.exponentialRampToValueAtTime(.001,t0+.7);c.connect(h);h.connect(k);k.connect(AC.destination);c.start(t0,Math.random()*2,.8)}
+ const s=AC.createBufferSource(),f=AC.createBiquadFilter(),k=AC.createGain();s.buffer=NB;f.type='lowpass';f.frequency.setValueAtTime(near?1100:500,t0);f.frequency.exponentialRampToValueAtTime(90,t0+dur);
+ k.gain.setValueAtTime(0,t0);k.gain.linearRampToValueAtTime(.95*v,t0+(near?.05:.7));for(let i=1;i<9;i++)k.gain.linearRampToValueAtTime(v*(.2+Math.random()*.7)*(1-i/10),t0+dur*i/9);k.gain.linearRampToValueAtTime(0,t0+dur);
+ s.connect(f);f.connect(k);k.connect(AC.destination);s.start(t0,Math.random()*3,dur+.2);
+ const o=AC.createOscillator(),ok=AC.createGain();o.type='sine';o.frequency.setValueAtTime(60,t0);o.frequency.exponentialRampToValueAtTime(34,t0+dur);ok.gain.setValueAtTime(0,t0);ok.gain.linearRampToValueAtTime(.3*v,t0+.15);ok.gain.exponentialRampToValueAtTime(.001,t0+dur*.8);o.connect(ok);ok.connect(AC.destination);o.start(t0);o.stop(t0+dur)}catch(e){}}
 setInterval(()=>{
-  if(me)rainLoop(S.rn?1:0);
+ rainAmb(!!(S.rn&&me));
  if(S.rn&&me){
-  if(Math.random()<(LQ?.25:.6))drop();
-  if(Math.random()<.006)thunder(); // Petir
+  if(Math.random()<(LQ?.25:.5))drop();
+  if(Math.random()<.004)thunder(); // Petir
  }
  if(S.tm==2&&!S.rn&&me&&Math.random()<.015){
   snd(4500,.03,'square',0,.005);snd(4500,.03,'square',.1,.005);snd(4500,.03,'square',.2,.005); // Jangkrik
@@ -419,32 +440,21 @@ function fin(s){me.sit=0;const w=s>=80;$('rt').textContent=w?'Congratulations! �
 // ===== gerak & klik =====
 const seats=()=>{const n=Math.max(S.P.filter(p=>!p.t).length,1,...S.P.map(p=>p.seat+1));return Array.from({length:n},(_,i)=>[350+(i%8)*(500/7)+Math.floor(i/40)*24,175+(Math.floor(i/8)%5)*47])};
 function arrive(){if(!pend)return;const a=pend;pend=null;if(a.k=='box')openBox(a.i);else if(a.k=='tseat'){me.x=600;me.y=142;dirty=1;keyOpen()}else{me.sit=1;me.sitT=performance.now();dirty=0;me.x=a.x;me.y=a.y+8;api('/sit',{s:a.i,x:a.x,y:a.y}).then(r=>{if(r.err){me.sit=0;toast(r.err)}else{snd(660,.08);rain(['✨','🔥','📝'],10)}})}}
-cv.onpointerdown=e=>{if(!me||modal)return;try{AC&&AC.resume()}catch(_){}const rect=cv.getBoundingClientRect(),lk=Math.min(rect.width/W,rect.height/H),wx=(e.clientX-rect.left-(rect.width-W*lk)/2)/lk,wy=(e.clientY-rect.top-(rect.height-H*lk)/2)/lk;if(wx>470&&wx<730&&wy>50&&wy<104&&S.bo>=0){bdOpen();return}const ct=S.ct;if(ct&&Math.hypot(ct[0]-wx,ct[1]-wy)<28){api('/cat').then(r=>r.err&&toast(r.err));return}if(me.sit)return;if(me.t&&Math.hypot(wx-600,wy-134)<34){tgt=[600,160];pend={k:'tseat'};return}
+cv.onpointerdown=e=>{if(!me||modal)return;try{AC&&AC.resume()}catch(_){}const rect=cv.getBoundingClientRect();const wx=(e.clientX-rect.left)*(W/rect.width),wy=(e.clientY-rect.top)*(H/rect.height);if(wx>470&&wx<730&&wy>50&&wy<104&&S.bo>=0){bdOpen();return}const ct=S.ct;if(ct&&Math.hypot(ct[0]-wx,ct[1]-wy)<28){api('/cat').then(r=>r.err&&toast(r.err));return}if(me.sit)return;if(me.t&&Math.hypot(wx-600,wy-134)<34){go(600,160);pend={k:'tseat'};return}
  if(me.t){const v=S.P.find(p=>!p.t&&pp[p.id]&&Math.hypot(pp[p.id].x-wx,pp[p.id].y-wy)<28);if(v)return void act('slap',v.id)}
- else{const b=S.b.find(b=>Math.hypot(b[1]-wx,b[2]-wy)<26);if(b){tgt=[b[1],b[2]+24];pend={k:'box',i:b[0]};return}
-  if(S.m=='ulangan'&&S.g){const sp=seats(),i=sp.findIndex(s=>Math.hypot(s[0]-wx,s[1]-wy)<28);if(i>=0){tgt=[sp[i][0],sp[i][1]+26];pend={k:'seat',i,x:sp[i][0],y:sp[i][1]};return}}}
- tgt=[wx,wy];pend=null};
+ else{const b=S.b.find(b=>Math.hypot(b[1]-wx,b[2]-wy)<26);if(b){go(b[1],b[2]+24);pend={k:'box',i:b[0]};return}
+  if(S.m=='ulangan'&&S.g){const sp=seats(),i=sp.findIndex(s=>Math.hypot(s[0]-wx,s[1]-wy)<28);if(i>=0){go(sp[i][0],sp[i][1]+26);pend={k:'seat',i,x:sp[i][0],y:sp[i][1]};return}}}
+ go(wx,wy);pend=null};
 onkeydown=e=>{if(e.target.tagName=='INPUT')return;if(e.key=='Enter'){if(me)$('ci').focus();return}if(e.key==' '){e.preventDefault();if(e.target.blur)e.target.blur();if(!e.repeat)space();return}keys[e.key.length>1?e.key:e.key.toLowerCase()]=1};onkeyup=e=>delete keys[e.key.length>1?e.key:e.key.toLowerCase()];
 setInterval(()=>{if(dirty&&me){dirty=0;api('/mv',{x:me.x,y:me.y,fx:me.fx,fy:me.fy,lv:me.sit?0:1})}},160);
-// jalur lewat pintu supaya tidak nabrak tembok bangunan
-const DR=[['O','L',[160,432],[160,385]],['O','C',[600,432],[600,385]],['O','R',[1040,432],[1040,385]],['L','C',[265,355],[315,355]],['C','R',[885,355],[935,355]]];
-const rg=(x,y)=>y>410?'O':x<290?'L':x<910?'C':'R';
-function wp(x,y,t){const a=rg(x,y),b=rg(t[0],t[1]);if(a==b)return t;
- const Q=[[a,[]]],seen={[a]:1};
- while(Q.length){const [r,pts]=Q.shift();
-  if(r==b){for(let i=0;i<pts.length;i+=2){const n=pts[i],f=pts[i+1],df=Math.hypot(f[0]-x,f[1]-y);if(df<=10)continue;
-    return(df<Math.hypot(f[0]-n[0],f[1]-n[1])-1||Math.hypot(n[0]-x,n[1]-y)<=10)?f:n}return t}
-  for(const d of DR){let n=null,p;if(d[0]==r){n=d[1];p=[d[2],d[3]]}else if(d[1]==r){n=d[0];p=[d[3],d[2]]}
-   if(n&&!seen[n]){seen[n]=1;Q.push([n,pts.concat(p)])}}}
- return t}
 function update(dt){const m=mm();if(!m)return;
  for(const p of S.P){const q=pp[p.id];if(p.id==me.id)continue;const dx=p.x-q.x,dy=p.y-q.y;q.w=Math.hypot(dx,dy)>1.5;q.x+=dx*.25;q.y+=dy*.25}
  S.I.forEach(i=>{const o=its[i.id];if(i.st==1&&pp[i.by]){o.x=pp[i.by].x;o.y=pp[i.by].y;o.z=0}else{o.x+=(i.x-o.x)*.5;o.y+=(i.y-o.y)*.5;o.z+=(i.z-o.z)*.5}});const lock=modal||m.s||(S.fz&&!me.t)||(m.ex!==null&&m.ex<0);let mx=0,my=0;
  if(!lock){const kx=!!(keys.ArrowRight||keys.d)-!!(keys.ArrowLeft||keys.a),ky=!!(keys.ArrowDown||keys.s)-!!(keys.ArrowUp||keys.w);
-  if(kx||ky){tgt=null;pend=null;const l=Math.hypot(kx,ky);mx=kx/l;my=ky/l}
-  else if(tgt){const d=Math.hypot(tgt[0]-me.x,tgt[1]-me.y);if(d<6){tgt=null;arrive()}else{const w=wp(me.x,me.y,tgt),ex=w[0]-me.x,ey=w[1]-me.y,e=Math.hypot(ex,ey)||1;mx=ex/e;my=ey/e}}}
+  if(kx||ky){tgt=null;pend=null;PATH=[];const l=Math.hypot(kx,ky);mx=kx/l;my=ky/l}
+  else if(tgt){const dx=tgt[0]-me.x,dy=tgt[1]-me.y,d=Math.hypot(dx,dy);if(d<6){if(PATH.length)tgt=PATH.shift();else{tgt=null;arrive()}}else{mx=dx/d;my=dy/d}}}
  if((mx||my)&&Math.hypot(mx-me.fx,my-me.fy)>.05){me.fx=mx;me.fy=my;dirty=1}
- let moved=false;if(mx||my){const [nx,ny]=cl(me.x,me.y,me.x+mx*190*dt,me.y+my*190*dt,me.t,S.g);moved=Math.hypot(nx-me.x,ny-me.y)>.05;if(moved){me.x=nx;me.y=ny;dirty=1;me.sit=0;if(Math.random()<.04)snd(300+Math.random()*80,.05,'sine',0,.05)}else if(tgt){tgt=null;pend=null}}
+ let moved=false;if(mx||my){const sp=tgt?Math.min(190*dt,Math.hypot(tgt[0]-me.x,tgt[1]-me.y)):190*dt,[nx,ny]=cl(me.x,me.y,me.x+mx*sp,me.y+my*sp,me.t,S.g);moved=Math.hypot(nx-me.x,ny-me.y)>.05;if(moved){me.x=nx;me.y=ny;dirty=1;me.sit=0;if(Math.random()<.04)snd(300+Math.random()*80,.05,'sine',0,.05)}else if(tgt){if(PATH.length)tgt=PATH.shift();else{tgt=null;pend=null}}}
  pp[me.id]=pp[me.id]||{x:me.x,y:me.y,w:0};pp[me.id].x=me.x;pp[me.id].y=me.y;pp[me.id].w=moved}
 // ===== gambar =====
 const rr=(x,y,w,h,r=6)=>{g.beginPath();g.roundRect(x,y,w,h,r);g.fill()};
