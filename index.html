@@ -259,10 +259,26 @@ const sOk=()=>seq([523,659,784,1047]),sBad=()=>seq([220,165],'sawtooth'),sGate=(
 const mel=[523,587,659,784,880,784,659,587,523,659,784,659,880,1047,880,784,659,784,659,523,587,659,587,0,523,659,784,1047,880,784,659,0];
 let mi=0;(function mus(){if(music&&me){const f=mel[mi%mel.length];if(f)snd(f,.22,'triangle',0,.035);if(mi%4===0&&f)snd(f/2,.4,'sine',0,.04);mi++;}setTimeout(mus,280/tempo)})();
 const bell=()=>{for(let i=0;i<6;i++)snd(i%2?880:1175,.4,'triangle',i*.24,.2)};
+// ===== suara hujan & petir realistis =====
+let NB=null,RN=null,RON=-1;
+function nbuf(){if(NB)return NB;AC=AC||new AudioContext();const n=AC.sampleRate*4,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;for(let i=0;i<n;i++){const w=Math.random()*2-1;b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926}return NB=b}
+function rainLoop(on){if(on===RON)return;RON=on;try{AC=AC||new AudioContext();
+ if(!RN){const m=AC.createGain();m.gain.value=0;m.connect(AC.destination);RN=m;
+  [[1800,.7,'lowpass',1.2],[4500,.5,'highpass',.7],[1000,.6,'bandpass',.8]].forEach(a=>{const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;const f=AC.createBiquadFilter();f.type=a[2];f.frequency.value=a[0];f.Q.value=a[1];const gg=AC.createGain();gg.gain.value=a[3];s.connect(f);f.connect(gg);gg.connect(m);s.start(0,Math.random()*3)})}
+ RN.gain.setTargetAtTime(on?(LQ?.28:.4):0,AC.currentTime,.8)}catch(e){}}
+function drop(){try{const s=AC.createBufferSource();s.buffer=nbuf();const f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=2500+Math.random()*4500;f.Q.value=3;const e=AC.createGain(),t=AC.currentTime;e.gain.setValueAtTime(.2+Math.random()*.3,t);e.gain.exponentialRampToValueAtTime(.001,t+.04);s.connect(f);f.connect(e);e.connect(AC.destination);s.start(t,Math.random()*3);s.stop(t+.05)}catch(e){}}
+function thunder(){try{AC=AC||new AudioContext();const t=AC.currentTime,far=Math.random(),T0=t+far*1.2,dur=3.5+Math.random()*3,m=AC.createGain();m.gain.value=.9-far*.4;m.connect(AC.destination);
+ const src=()=>{const s=AC.createBufferSource();s.buffer=nbuf();s.loop=true;s.start(T0,Math.random()*3);s.stop(T0+dur+.2);return s};
+ if(far<.6){const s=src(),f=AC.createBiquadFilter(),e=AC.createGain();f.type='highpass';f.frequency.value=900;e.gain.setValueAtTime(0,T0);e.gain.linearRampToValueAtTime(1.2,T0+.01);e.gain.exponentialRampToValueAtTime(.001,T0+.35);s.connect(f);f.connect(e);e.connect(m)}
+ {const s=src(),f=AC.createBiquadFilter(),e=AC.createGain();f.type='lowpass';f.frequency.setValueAtTime(700-far*350,T0);f.frequency.exponentialRampToValueAtTime(90,T0+dur);e.gain.setValueAtTime(.001,T0);e.gain.linearRampToValueAtTime(1.6,T0+.08+far*.3);
+  for(let k=1;k<5;k++)e.gain.linearRampToValueAtTime((.4+Math.random()*.9)*(1-k/5),T0+.3+k*(dur-.6)/5);
+  e.gain.exponentialRampToValueAtTime(.001,T0+dur);s.connect(f);f.connect(e);e.connect(m)}
+ {const o=AC.createOscillator(),e=AC.createGain();o.type='sine';o.frequency.setValueAtTime(60,T0);o.frequency.exponentialRampToValueAtTime(28,T0+dur);e.gain.setValueAtTime(.001,T0);e.gain.linearRampToValueAtTime(.5,T0+.1);e.gain.exponentialRampToValueAtTime(.001,T0+dur);o.connect(e);e.connect(m);o.start(T0);o.stop(T0+dur+.2)}}catch(e){}}
 setInterval(()=>{
+  if(me)rainLoop(S.rn?1:0);
  if(S.rn&&me){
-  if(!LQ||Math.random()<.35)snd(1800+Math.random()*2500,.02,'square',0,.008);
-  if(Math.random()<.005){snd(150,1.5,'sawtooth',0,.1);snd(100,2,'square',.1,.15)} // Petir
+  if(Math.random()<(LQ?.25:.6))drop();
+  if(Math.random()<.006)thunder(); // Petir
  }
  if(S.tm==2&&!S.rn&&me&&Math.random()<.015){
   snd(4500,.03,'square',0,.005);snd(4500,.03,'square',.1,.005);snd(4500,.03,'square',.2,.005); // Jangkrik
@@ -403,19 +419,30 @@ function fin(s){me.sit=0;const w=s>=80;$('rt').textContent=w?'Congratulations! �
 // ===== gerak & klik =====
 const seats=()=>{const n=Math.max(S.P.filter(p=>!p.t).length,1,...S.P.map(p=>p.seat+1));return Array.from({length:n},(_,i)=>[350+(i%8)*(500/7)+Math.floor(i/40)*24,175+(Math.floor(i/8)%5)*47])};
 function arrive(){if(!pend)return;const a=pend;pend=null;if(a.k=='box')openBox(a.i);else if(a.k=='tseat'){me.x=600;me.y=142;dirty=1;keyOpen()}else{me.sit=1;me.sitT=performance.now();dirty=0;me.x=a.x;me.y=a.y+8;api('/sit',{s:a.i,x:a.x,y:a.y}).then(r=>{if(r.err){me.sit=0;toast(r.err)}else{snd(660,.08);rain(['✨','🔥','📝'],10)}})}}
-cv.onpointerdown=e=>{if(!me||modal)return;try{AC&&AC.resume()}catch(_){}const rect=cv.getBoundingClientRect();const wx=(e.clientX-rect.left)*(W/rect.width),wy=(e.clientY-rect.top)*(H/rect.height);if(wx>470&&wx<730&&wy>50&&wy<104&&S.bo>=0){bdOpen();return}const ct=S.ct;if(ct&&Math.hypot(ct[0]-wx,ct[1]-wy)<28){api('/cat').then(r=>r.err&&toast(r.err));return}if(me.sit)return;if(me.t&&Math.hypot(wx-600,wy-134)<34){tgt=[600,160];pend={k:'tseat'};return}
+cv.onpointerdown=e=>{if(!me||modal)return;try{AC&&AC.resume()}catch(_){}const rect=cv.getBoundingClientRect(),lk=Math.min(rect.width/W,rect.height/H),wx=(e.clientX-rect.left-(rect.width-W*lk)/2)/lk,wy=(e.clientY-rect.top-(rect.height-H*lk)/2)/lk;if(wx>470&&wx<730&&wy>50&&wy<104&&S.bo>=0){bdOpen();return}const ct=S.ct;if(ct&&Math.hypot(ct[0]-wx,ct[1]-wy)<28){api('/cat').then(r=>r.err&&toast(r.err));return}if(me.sit)return;if(me.t&&Math.hypot(wx-600,wy-134)<34){tgt=[600,160];pend={k:'tseat'};return}
  if(me.t){const v=S.P.find(p=>!p.t&&pp[p.id]&&Math.hypot(pp[p.id].x-wx,pp[p.id].y-wy)<28);if(v)return void act('slap',v.id)}
  else{const b=S.b.find(b=>Math.hypot(b[1]-wx,b[2]-wy)<26);if(b){tgt=[b[1],b[2]+24];pend={k:'box',i:b[0]};return}
   if(S.m=='ulangan'&&S.g){const sp=seats(),i=sp.findIndex(s=>Math.hypot(s[0]-wx,s[1]-wy)<28);if(i>=0){tgt=[sp[i][0],sp[i][1]+26];pend={k:'seat',i,x:sp[i][0],y:sp[i][1]};return}}}
  tgt=[wx,wy];pend=null};
 onkeydown=e=>{if(e.target.tagName=='INPUT')return;if(e.key=='Enter'){if(me)$('ci').focus();return}if(e.key==' '){e.preventDefault();if(e.target.blur)e.target.blur();if(!e.repeat)space();return}keys[e.key.length>1?e.key:e.key.toLowerCase()]=1};onkeyup=e=>delete keys[e.key.length>1?e.key:e.key.toLowerCase()];
 setInterval(()=>{if(dirty&&me){dirty=0;api('/mv',{x:me.x,y:me.y,fx:me.fx,fy:me.fy,lv:me.sit?0:1})}},160);
+// jalur lewat pintu supaya tidak nabrak tembok bangunan
+const DR=[['O','L',[160,432],[160,385]],['O','C',[600,432],[600,385]],['O','R',[1040,432],[1040,385]],['L','C',[265,355],[315,355]],['C','R',[885,355],[935,355]]];
+const rg=(x,y)=>y>410?'O':x<290?'L':x<910?'C':'R';
+function wp(x,y,t){const a=rg(x,y),b=rg(t[0],t[1]);if(a==b)return t;
+ const Q=[[a,[]]],seen={[a]:1};
+ while(Q.length){const [r,pts]=Q.shift();
+  if(r==b){for(let i=0;i<pts.length;i+=2){const n=pts[i],f=pts[i+1],df=Math.hypot(f[0]-x,f[1]-y);if(df<=10)continue;
+    return(df<Math.hypot(f[0]-n[0],f[1]-n[1])-1||Math.hypot(n[0]-x,n[1]-y)<=10)?f:n}return t}
+  for(const d of DR){let n=null,p;if(d[0]==r){n=d[1];p=[d[2],d[3]]}else if(d[1]==r){n=d[0];p=[d[3],d[2]]}
+   if(n&&!seen[n]){seen[n]=1;Q.push([n,pts.concat(p)])}}}
+ return t}
 function update(dt){const m=mm();if(!m)return;
  for(const p of S.P){const q=pp[p.id];if(p.id==me.id)continue;const dx=p.x-q.x,dy=p.y-q.y;q.w=Math.hypot(dx,dy)>1.5;q.x+=dx*.25;q.y+=dy*.25}
  S.I.forEach(i=>{const o=its[i.id];if(i.st==1&&pp[i.by]){o.x=pp[i.by].x;o.y=pp[i.by].y;o.z=0}else{o.x+=(i.x-o.x)*.5;o.y+=(i.y-o.y)*.5;o.z+=(i.z-o.z)*.5}});const lock=modal||m.s||(S.fz&&!me.t)||(m.ex!==null&&m.ex<0);let mx=0,my=0;
  if(!lock){const kx=!!(keys.ArrowRight||keys.d)-!!(keys.ArrowLeft||keys.a),ky=!!(keys.ArrowDown||keys.s)-!!(keys.ArrowUp||keys.w);
   if(kx||ky){tgt=null;pend=null;const l=Math.hypot(kx,ky);mx=kx/l;my=ky/l}
-  else if(tgt){const dx=tgt[0]-me.x,dy=tgt[1]-me.y,d=Math.hypot(dx,dy);if(d<6){tgt=null;arrive()}else{mx=dx/d;my=dy/d}}}
+  else if(tgt){const d=Math.hypot(tgt[0]-me.x,tgt[1]-me.y);if(d<6){tgt=null;arrive()}else{const w=wp(me.x,me.y,tgt),ex=w[0]-me.x,ey=w[1]-me.y,e=Math.hypot(ex,ey)||1;mx=ex/e;my=ey/e}}}
  if((mx||my)&&Math.hypot(mx-me.fx,my-me.fy)>.05){me.fx=mx;me.fy=my;dirty=1}
  let moved=false;if(mx||my){const [nx,ny]=cl(me.x,me.y,me.x+mx*190*dt,me.y+my*190*dt,me.t,S.g);moved=Math.hypot(nx-me.x,ny-me.y)>.05;if(moved){me.x=nx;me.y=ny;dirty=1;me.sit=0;if(Math.random()<.04)snd(300+Math.random()*80,.05,'sine',0,.05)}else if(tgt){tgt=null;pend=null}}
  pp[me.id]=pp[me.id]||{x:me.x,y:me.y,w:0};pp[me.id].x=me.x;pp[me.id].y=me.y;pp[me.id].w=moved}
